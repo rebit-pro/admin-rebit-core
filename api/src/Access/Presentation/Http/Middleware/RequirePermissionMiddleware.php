@@ -24,6 +24,7 @@ final readonly class RequirePermissionMiddleware implements MiddlewareInterface
         private Permission $permission,
     ) {}
 
+    #[\Override]
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $identity = $request->getAttribute('identity');

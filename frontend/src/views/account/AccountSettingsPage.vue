@@ -91,9 +91,32 @@ async function submitEmail(): Promise<void> {
           <v-card-title class="text-subtitle-1 font-weight-bold">Смена пароля</v-card-title>
           <v-card-text>
             <v-form @submit.prevent="submitPassword">
-              <v-text-field v-model="password.current" label="Текущий пароль" type="password" variant="outlined" density="comfortable" class="mb-2" />
-              <v-text-field v-model="password.next" label="Новый пароль" type="password" variant="outlined" density="comfortable" hint="Минимум 8 символов" persistent-hint class="mb-2" />
-              <v-text-field v-model="password.confirm" label="Повторите новый пароль" type="password" variant="outlined" density="comfortable" class="mb-4" />
+              <v-text-field
+                v-model="password.current"
+                label="Текущий пароль"
+                type="password"
+                variant="outlined"
+                density="comfortable"
+                class="mb-2"
+              />
+              <v-text-field
+                v-model="password.next"
+                label="Новый пароль"
+                type="password"
+                variant="outlined"
+                density="comfortable"
+                hint="Минимум 8 символов"
+                persistent-hint
+                class="mb-2"
+              />
+              <v-text-field
+                v-model="password.confirm"
+                label="Повторите новый пароль"
+                type="password"
+                variant="outlined"
+                density="comfortable"
+                class="mb-4"
+              />
               <v-btn type="submit" color="primary" :loading="passwordLoading" block>Изменить пароль</v-btn>
             </v-form>
           </v-card-text>
@@ -105,7 +128,15 @@ async function submitEmail(): Promise<void> {
           <v-card-title class="text-subtitle-1 font-weight-bold">Смена логина</v-card-title>
           <v-card-text>
             <v-form @submit.prevent="submitLogin">
-              <v-text-field v-model="login" label="Логин" variant="outlined" density="comfortable" hint="3–32 символа: латиница, цифры, . _ -" persistent-hint class="mb-4" />
+              <v-text-field
+                v-model="login"
+                label="Логин"
+                variant="outlined"
+                density="comfortable"
+                hint="3–32 символа: латиница, цифры, . _ -"
+                persistent-hint
+                class="mb-4"
+              />
               <v-btn type="submit" color="primary" :loading="loginLoading" block>Сохранить логин</v-btn>
             </v-form>
           </v-card-text>
@@ -115,8 +146,22 @@ async function submitEmail(): Promise<void> {
           <v-card-title class="text-subtitle-1 font-weight-bold">Смена email</v-card-title>
           <v-card-text>
             <v-form @submit.prevent="submitEmail">
-              <v-text-field v-model="emailForm.newEmail" label="Новый email" type="email" variant="outlined" density="comfortable" class="mb-2" />
-              <v-text-field v-model="emailForm.currentPassword" label="Текущий пароль (подтверждение)" type="password" variant="outlined" density="comfortable" class="mb-4" />
+              <v-text-field
+                v-model="emailForm.newEmail"
+                label="Новый email"
+                type="email"
+                variant="outlined"
+                density="comfortable"
+                class="mb-2"
+              />
+              <v-text-field
+                v-model="emailForm.currentPassword"
+                label="Текущий пароль (подтверждение)"
+                type="password"
+                variant="outlined"
+                density="comfortable"
+                class="mb-4"
+              />
               <v-btn type="submit" color="primary" :loading="emailLoading" block>Изменить email</v-btn>
             </v-form>
           </v-card-text>

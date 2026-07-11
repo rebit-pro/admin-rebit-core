@@ -1,7 +1,18 @@
-.git
-vendor
-.env
-var/cache
-var/log
-.phpunit.cache
-.psalm-cache
+# Контекст prod-сборок — корень монорепо (docker build -f docker/production/<svc>/Dockerfile .).
+# Паттерны якорные к корню контекста: `vendor` НЕ исключил бы api/vendor — поэтому пути явные.
+.git/
+.github/
+.idea/
+docs/
+
+api/.env
+api/var/
+**/vendor/
+api/.phpunit.cache/
+api/.phpunit.result.cache
+api/.psalm-cache/
+api/.php-cs-fixer.cache
+
+frontend/node_modules/
+frontend/dist/
+frontend/.env

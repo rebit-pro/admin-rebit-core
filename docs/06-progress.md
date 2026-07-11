@@ -147,3 +147,26 @@ MVP-1 = тонкий вертикальный срез до прода: `Auth` +
 - §13 пересобран: шаг 0 — блокер-пакет (SSH-канарейка с GH-раннера, инвентаризация сервера, tenancy-решение заказчика), выполненное отмечено; §16: капча «решено, но НЕ сделано» (код на GeeTest — предусловие релиза), Sentry SaaS-без-ПДн, tenancy — ОТКРЫТО.
 
 **Следующий шаг:** шаг 0 из §13 — SSH-канарейка + инвентаризация 37.143.8.221 (нужна среда с рабочим SSH — из текущей баннер не приходит) + письменное tenancy-решение заказчика. Параллельно можно начинать шаги 1–3 (prod-Dockerfile'ы, приложение к проду, dev-набор/Makefile).
+
+## 2026-07-11 Шаги 1–3 плана §13 (04-devops.md) выполнены
+
+**Шаг 1 — prod-Dockerfile'ы API + отказ от SQLite:**
+- `docker/production/{php-fpm,php-cli,nginx}` — двухстадийные, context `.` (корень), `COPY api/ ./`, non-root (www-data/app), opcache `validate_timestamps=0`, `expose_php=Off`, php-fpm `/ping`; php-cli — POSIX `wait-for` (в alpine нет bash); nginx — envsubst-шаблон (`PHP_FPM_HOST`, `CORS_ALLOWED_ORIGIN`), CORS-whitelist + preflight 204, security-заголовки. ✅ nginx-образ собран, `nginx -t` чист. ⚠️ php-образы собрать локально нельзя (Docker Hub и зеркало timeweb из среды недоступны) — проверка `make try-build` при первом CI-прогоне.
+- SQLite упразднён: ветка в `di/database.php`, driver-развилка в `Migrator`, `migrations/sqlite/`, sqlite-дефолт `.env.example`.
+
+**Шаг 2 — приложение к проду:**
+- `*_FILE`-чтение: `Shared/Config/EnvFileResolver` в bootstrap (приоритет `_FILE` над plain), юнит-тесты; **проверено вживую** — dev-стек переведён на `DB_PASSWORD_FILE=/run/secrets/db_password`, миграции/логин работают.
+- `/health` → readiness (ленивый `SELECT 1` через контейнер): 200 при живой БД, **503 при лежащей** (проверено остановкой db); `/health/liveness` — статический.
+- `auth:purge-expired-tokens` (+ чистка протухших regcodes) — прогнана: «Удалено: 2 токенов».
+- **SmartCaptcha вместо GeeTest**: фронт (invisible-виджет, execute на submit, reset после ошибки, типы в env.d.ts, `VITE_SMARTCAPTCHA_CLIENT_KEY` везде), бэк (`CaptchaVerifier`-порт, `SmartCaptchaVerifier` fail-closed / `NullCaptchaVerifier` при пустом ключе, IP в validate, 422), прод-Dockerfile фронта переписан (node:24, nginx:1.29, `npm ci` строго, build-args по контракту §2.4). GeeTest в коде не осталось.
+
+**Шаг 3 — dev-контур и тулинг:**
+- compose: + `php-cli` (profile tools), + `mailer` (mailpit, 127.0.0.1:8025), + file-secrets (`docker/development/secrets/*`), порт БД → loopback.
+- `.dockerignore` переписан (якорные пути: api/.env, api/var, **/vendor, node_modules, dist, docs, .github).
+- Makefile: `REGISTRY/IMAGE_TAG/STACK_NAME=admin`, `api-cs-check`, `api-analyze` (psalm), `build/build-api/build-frontend/try-build/push` (префикс `admin-rebit-core-*`); compose-сборка переименована в `docker-build`.
+- composer: `cs-check`/`cs-fix`/`psalm`, `check` расширен; `psalm.xml` (level 4). Psalm-долг разобран: 59 → 0 (авто `#[Override]` + реальные фиксы: stale-шейпы `AuthRepository` без `status`, nullable-возвраты в 3 Application-хендлерах → явный 404-throw).
+- Prettier-долг перенесённого кода (24 ошибки в UsersPage/DashboardPage/vite.config — завалил бы CI) закрыт `lint:fix`.
+
+**Verify:** php -l ✅ · cs-check 0 ✅ · psalm 0 ✅ · PHPUnit 13/13 ✅ · vue-tsc ✅ · eslint ✅ · /health 200/503 ✅ · login+token ✅ · purge ✅ · mailpit UI 200 ✅. Отложено с пометкой: traefik-dev и s3mock/backup в dev-compose (появятся с шагами 6–8), e2e-прогон (браузеры Playwright не ставились).
+
+**Следующий шаг:** §13.4 GitHub-side setup (переименование ветки в main, protection, environment, secrets) и §13.0 (SSH-канарейка, инвентаризация сервера, tenancy) — требуют действий на GitHub/сервере.

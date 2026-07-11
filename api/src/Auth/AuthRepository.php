@@ -8,7 +8,7 @@ final readonly class AuthRepository
 {
     public function __construct(private \PDO $pdo) {}
 
-    /** @return null|array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string} */
+    /** @return null|array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string,status:string} */
     public function findUserByEmailOrLogin(string $identifier): ?array
     {
         $statement = $this->pdo->prepare(
@@ -23,7 +23,7 @@ final readonly class AuthRepository
         return false === $row ? null : $this->normalizeUserRow($row);
     }
 
-    /** @return null|array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string} */
+    /** @return null|array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string,status:string} */
     public function findUserByTokenHash(string $tokenHash): ?array
     {
         $statement = $this->pdo->prepare(
@@ -113,7 +113,7 @@ final readonly class AuthRepository
         ];
     }
 
-    /** @return array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string} */
+    /** @return array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string,status:string} */
     public function upsertUser(
         string $email,
         string $passwordHash,
@@ -158,7 +158,7 @@ final readonly class AuthRepository
         $statement->execute(['email' => $email]);
     }
 
-    /** @return null|array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string} */
+    /** @return null|array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string,status:string} */
     public function findUserById(int $id): ?array
     {
         $statement = $this->pdo->prepare(
@@ -369,9 +369,11 @@ final readonly class AuthRepository
     }
 
     /**
-     * @param array{id:mixed,email:mixed,password_hash:mixed,name:mixed,role:mixed,login:mixed,phone:mixed,address:mixed} $row
+     * @param array{id:mixed,email:mixed,password_hash:mixed,name:mixed,role:mixed,login:mixed,phone:mixed,address:mixed,status?:mixed} $row
      *
-     * @return array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string}
+     * @return (null|int|string)[]
+     *
+     * @psalm-return array{id: int, email: string, password_hash: string, name: string, role: string, login: string, phone: null|string, address: null|string, status: string}
      */
     private function normalizeUserRow(array $row): array
     {

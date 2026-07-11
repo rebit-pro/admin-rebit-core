@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { router } from '@/router';
-import { authApi, type AuthUser, type GeeTestCaptchaPayload, type RequestRegistrationCodeResponse } from '@/api/auth';
+import { authApi, type AuthUser, type SmartCaptchaPayload, type RequestRegistrationCodeResponse } from '@/api/auth';
 import { accountApi } from '@/api/account';
 
 const TOKEN_STORAGE_KEY = 'token';
@@ -160,7 +160,7 @@ export const useAuthStore = defineStore('auth', () => {
     return isAuthenticated.value ? token.value : null;
   }
 
-  async function login(email: string, password: string, captcha?: GeeTestCaptchaPayload): Promise<void> {
+  async function login(email: string, password: string, captcha?: SmartCaptchaPayload): Promise<void> {
     const response = await authApi.login({ email, password, captcha });
     setSession(response.token, response.user, response.expiresAt);
     await router.push(returnUrl.value ?? '/dashboard');

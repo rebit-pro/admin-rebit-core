@@ -10,6 +10,7 @@ final readonly class PdoAuditLog implements AuditLog
 {
     public function __construct(private \PDO $pdo) {}
 
+    #[\Override]
     public function append(
         ?int $actorId,
         string $action,

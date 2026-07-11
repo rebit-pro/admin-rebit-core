@@ -15,6 +15,7 @@ final readonly class PdoUnitOfWork implements UnitOfWork
         private SyncEventBus $bus,
     ) {}
 
+    #[\Override]
     public function transactional(callable $work): mixed
     {
         // Вложенный вызов присоединяется к внешней транзакции (PDO не умеет вложенные begin).

@@ -1,0 +1,48 @@
+# CORS: домены раздельные (admin.rebit-pro.ru → api2.rebit-pro.ru), whitelist вместо `*`.
+map $http_origin $cors_origin {
+    default "";
+    "${CORS_ALLOWED_ORIGIN}" $http_origin;
+}
+
+server {
+    listen 80;
+    server_name _;
+    root /app/public;
+    index index.php;
+
+    server_tokens off;
+    client_max_body_size 20m;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy no-referrer always;
+
+    location /health/nginx {
+        access_log off;
+        return 200 "alive\n";
+    }
+
+    location / {
+        add_header Access-Control-Allow-Origin $cors_origin always;
+        add_header Access-Control-Allow-Methods "GET, POST, PATCH, PUT, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
+        add_header Access-Control-Max-Age 86400 always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy no-referrer always;
+
+        if ($request_method = OPTIONS) {
+            return 204;
+        }
+
+        try_files $uri /index.php$is_args$args;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param SCRIPT_NAME $fastcgi_script_name;
+        fastcgi_pass ${PHP_FPM_HOST}:9000;
+        fastcgi_read_timeout 300;
+    }
+}

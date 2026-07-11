@@ -14,21 +14,25 @@ final readonly class UserRoleChanged implements DomainEvent
         private \DateTimeImmutable $occurredAt,
     ) {}
 
+    #[\Override]
     public function eventName(): string
     {
         return 'auth.user.role_changed';
     }
 
+    #[\Override]
     public function occurredAt(): \DateTimeImmutable
     {
         return $this->occurredAt;
     }
 
+    #[\Override]
     public function aggregateId(): string
     {
         return (string)$this->userId;
     }
 
+    #[\Override]
     public function payload(): array
     {
         return ['userId' => $this->userId, 'newRole' => $this->newRole];

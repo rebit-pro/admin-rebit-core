@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { Form } from 'vee-validate';
-import type { GeeTestCaptchaPayload } from '@/api/auth';
+import type { SmartCaptchaPayload } from '@/api/auth';
 import { isMockApiEnabled } from '@/mocks/config';
 
 const show1 = ref(false);
@@ -13,12 +13,14 @@ const captchaReady = ref(false);
 const captchaProcessing = ref(false);
 const captchaError = ref('');
 const apiError = ref('');
+const captchaContainer = ref<HTMLElement | null>(null);
 
 const authStore = useAuthStore();
-const geetestCaptchaId = isMockApiEnabled ? '' : (import.meta.env.VITE_GEETEST_CAPTCHA_ID?.trim() ?? '');
-const geeTestScriptSrc = 'https://static.geetest.com/v4/gt4.js';
+const smartCaptchaClientKey = isMockApiEnabled ? '' : (import.meta.env.VITE_SMARTCAPTCHA_CLIENT_KEY?.trim() ?? '');
+const smartCaptchaScriptSrc = 'https://smartcaptcha.yandexcloud.net/captcha.js?render=onload&onload=__onSmartCaptchaLoad';
 
-let captchaInstance: GeeTestCaptchaInstance | null = null;
+let captchaWidgetId: number | null = null;
+let unsubscribeCallbacks: Array<() => void> = [];
 let activeSetErrors: ((errors: Record<string, string>) => void) | null = null;
 let captchaScript: HTMLScriptElement | null = null;
 
@@ -40,130 +42,104 @@ function setApiError(message: string, setErrors?: (errors: Record<string, string
   }
 }
 
-function normalizeCaptchaResult(result: GeeTestCaptchaValidateResult): GeeTestCaptchaPayload {
-  return {
-    lot_number: result.lot_number,
-    captcha_output: result.captcha_output,
-    pass_token: result.pass_token,
-    gen_time: result.gen_time
-  };
-}
-
 function handleLoginError(error: any): void {
   const message = error?.response?.data?.message ?? 'Ошибка авторизации';
   setApiError(message);
 }
 
-async function submitLogin(captcha?: GeeTestCaptchaPayload): Promise<void> {
+async function submitLogin(captcha?: SmartCaptchaPayload): Promise<void> {
   captchaProcessing.value = true;
 
   try {
     await authStore.login(email.value.trim(), password.value, captcha);
   } catch (error) {
     handleLoginError(error);
+    // Токен SmartCaptcha одноразовый — сбрасываем виджет, чтобы повторная попытка получила новый.
+    if (null !== captchaWidgetId) {
+      window.smartCaptcha?.reset(captchaWidgetId);
+    }
   } finally {
     captchaProcessing.value = false;
   }
 }
 
-function handleCaptchaScriptLoad(): void {
-  initCaptcha();
-}
-
 function handleCaptchaScriptError(): void {
   captchaLoading.value = false;
   captchaProcessing.value = false;
-  captchaError.value = 'Не удалось загрузить GeeTest CAPTCHA';
+  captchaError.value = 'Не удалось загрузить SmartCaptcha';
 }
 
 function initCaptcha(): void {
-  if ('' === geetestCaptchaId) {
+  if ('' === smartCaptchaClientKey) {
     captchaReady.value = true;
     return;
   }
 
-  if (undefined === window.initGeetest4) {
-    captchaError.value = 'Не удалось инициализировать GeeTest CAPTCHA';
+  if (undefined === window.smartCaptcha || null === captchaContainer.value) {
+    captchaError.value = 'Не удалось инициализировать SmartCaptcha';
     captchaLoading.value = false;
     return;
   }
 
-  captchaLoading.value = true;
-
-  window.initGeetest4(
-    {
-      captchaId: geetestCaptchaId,
-      product: 'bind'
-    },
-    (instance) => {
-      captchaInstance = instance;
-
-      captchaInstance
-        .onReady(() => {
-          captchaReady.value = true;
-          captchaLoading.value = false;
-          captchaError.value = '';
-        })
-        .onSuccess(() => {
-          if (null === captchaInstance) {
-            captchaProcessing.value = false;
-            setApiError('GeeTest CAPTCHA не инициализирована');
-            return;
-          }
-
-          const result = captchaInstance.getValidate();
-
-          if (false === result || null === result) {
-            captchaProcessing.value = false;
-            setApiError('Не удалось получить данные CAPTCHA');
-            return;
-          }
-
-          void submitLogin(normalizeCaptchaResult(result));
-        })
-        .onError(() => {
-          captchaProcessing.value = false;
-          captchaLoading.value = false;
-          captchaError.value = 'GeeTest CAPTCHA временно недоступна. Попробуйте ещё раз.';
-        });
-
-      captchaInstance.onClose?.(() => {
-        captchaLoading.value = false;
+  captchaWidgetId = window.smartCaptcha.render(captchaContainer.value, {
+    sitekey: smartCaptchaClientKey,
+    invisible: true,
+    hl: 'ru',
+    shieldPosition: 'bottom-right',
+    callback: (token: string) => {
+      if ('' === token) {
         captchaProcessing.value = false;
-      });
+        setApiError('Не удалось пройти проверку CAPTCHA');
+        return;
+      }
+
+      void submitLogin({ token });
     }
-  );
+  });
+
+  unsubscribeCallbacks = [
+    window.smartCaptcha.subscribe(captchaWidgetId, 'challenge-hidden', () => {
+      captchaProcessing.value = false;
+    }),
+    window.smartCaptcha.subscribe(captchaWidgetId, 'network-error', () => {
+      captchaProcessing.value = false;
+      captchaError.value = 'SmartCaptcha временно недоступна. Попробуйте ещё раз.';
+    })
+  ];
+
+  captchaReady.value = true;
+  captchaLoading.value = false;
+  captchaError.value = '';
 }
 
 function loadCaptcha(): void {
-  if ('' === geetestCaptchaId) {
+  if ('' === smartCaptchaClientKey) {
     captchaReady.value = true;
     captchaLoading.value = false;
     return;
   }
 
-  if (undefined !== window.initGeetest4) {
+  if (undefined !== window.smartCaptcha) {
     initCaptcha();
     return;
   }
 
   captchaLoading.value = true;
   captchaError.value = '';
+  window.__onSmartCaptchaLoad = initCaptcha;
 
-  const existingCaptchaScript = document.querySelector<HTMLScriptElement>(`script[src="${geeTestScriptSrc}"]`);
+  const existingCaptchaScript = document.querySelector<HTMLScriptElement>(`script[src="${smartCaptchaScriptSrc}"]`);
 
   if (null !== existingCaptchaScript) {
     captchaScript = existingCaptchaScript;
-    captchaScript.addEventListener('load', handleCaptchaScriptLoad, { once: true });
     captchaScript.addEventListener('error', handleCaptchaScriptError, { once: true });
 
     return;
   }
 
   captchaScript = document.createElement('script');
-  captchaScript.src = geeTestScriptSrc;
+  captchaScript.src = smartCaptchaScriptSrc;
   captchaScript.async = true;
-  captchaScript.addEventListener('load', handleCaptchaScriptLoad, { once: true });
   captchaScript.addEventListener('error', handleCaptchaScriptError, { once: true });
 
   document.head.appendChild(captchaScript);
@@ -175,17 +151,17 @@ function validate(_values: any, { setErrors }: any) {
   apiError.value = '';
   setErrors({ apiError: '' });
 
-  if ('' === geetestCaptchaId) {
+  if ('' === smartCaptchaClientKey) {
     return submitLogin();
   }
 
-  if (false === captchaReady.value || null === captchaInstance) {
+  if (false === captchaReady.value || null === captchaWidgetId || undefined === window.smartCaptcha) {
     setApiError('CAPTCHA ещё загружается, попробуйте через пару секунд', setErrors);
     return Promise.resolve();
   }
 
   captchaProcessing.value = true;
-  captchaInstance.showCaptcha();
+  window.smartCaptcha.execute(captchaWidgetId);
 
   return Promise.resolve();
 }
@@ -196,13 +172,19 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (null !== captchaScript) {
-    captchaScript.removeEventListener('load', handleCaptchaScriptLoad);
     captchaScript.removeEventListener('error', handleCaptchaScriptError);
     captchaScript = null;
   }
 
-  captchaInstance?.destroy?.();
-  captchaInstance = null;
+  window.__onSmartCaptchaLoad = undefined;
+  unsubscribeCallbacks.forEach((unsubscribe) => unsubscribe());
+  unsubscribeCallbacks = [];
+
+  if (null !== captchaWidgetId) {
+    window.smartCaptcha?.destroy(captchaWidgetId);
+    captchaWidgetId = null;
+  }
+
   activeSetErrors = null;
   captchaProcessing.value = false;
 });
@@ -246,7 +228,7 @@ onUnmounted(() => {
       color="secondary"
       data-testid="login-submit"
       :loading="isSubmitting || captchaProcessing"
-      :disabled="captchaLoading || captchaProcessing || ('' !== geetestCaptchaId && false === captchaReady)"
+      :disabled="captchaLoading || captchaProcessing || ('' !== smartCaptchaClientKey && false === captchaReady)"
       block
       class="mt-6"
       variant="flat"
@@ -256,7 +238,9 @@ onUnmounted(() => {
       Войти
     </v-btn>
 
-    <div v-if="captchaLoading" class="text-caption text-lightText mt-3">Загружаем GeeTest CAPTCHA...</div>
+    <div ref="captchaContainer" class="smart-captcha-container"></div>
+
+    <div v-if="captchaLoading" class="text-caption text-lightText mt-3">Загружаем SmartCaptcha...</div>
 
     <v-alert v-if="captchaError" color="warning" class="mt-4" variant="tonal">
       {{ captchaError }}

@@ -8,7 +8,7 @@ use Psr\Http\Message\ResponseInterface;
 
 final readonly class JsonResponder
 {
-    public function success(ResponseInterface $response, mixed $data = null, int $status = 200): ResponseInterface
+    public function success(ResponseInterface $response, ?array $data = null, int $status = 200): ResponseInterface
     {
         if (204 === $status) {
             return $response->withStatus(204);

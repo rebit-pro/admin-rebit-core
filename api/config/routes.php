@@ -22,10 +22,12 @@ use App\Http\Action\Auth\LoginAction;
 use App\Http\Action\Auth\LogoutAction;
 use App\Http\Action\Auth\RequestRegistrationCodeAction;
 use App\Http\Action\HealthAction;
+use App\Http\Action\LivenessAction;
 use Slim\App;
 
 return static function(App $app): void {
     $app->get('/health', HealthAction::class);
+    $app->get('/health/liveness', LivenessAction::class);
 
     $app->group('/api/v1/auth', function($group): void {
         $group->post('/login', LoginAction::class);

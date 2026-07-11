@@ -21,7 +21,9 @@ final readonly class LoginAction
     {
         try {
             $payload = $request->getParsedBody();
-            $data = $this->authService->login(is_array($payload) ? $payload : []);
+            $serverParams = $request->getServerParams();
+            $ip = is_string($serverParams['REMOTE_ADDR'] ?? null) ? $serverParams['REMOTE_ADDR'] : null;
+            $data = $this->authService->login(is_array($payload) ? $payload : [], $ip);
 
             return $this->responder->success($response, $data, 200);
         } catch (AuthException $exception) {

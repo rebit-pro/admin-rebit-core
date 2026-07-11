@@ -26,6 +26,7 @@ final readonly class Id implements \Stringable
         $this->value = strtolower($value);
     }
 
+    #[\Override]
     public function __toString(): string
     {
         return $this->value;

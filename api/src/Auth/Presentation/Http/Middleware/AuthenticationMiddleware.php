@@ -23,6 +23,7 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
         private ActorContext $actor,
     ) {}
 
+    #[\Override]
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $identity = $this->auth->identity($request->getHeaderLine('Authorization'));

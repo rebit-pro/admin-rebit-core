@@ -12,6 +12,7 @@ use App\Auth\Application\Port\PasswordHasher;
  */
 final class NativePasswordHasher implements PasswordHasher
 {
+    #[\Override]
     public function hash(string $plain): string
     {
         $algo = \defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT;
@@ -19,6 +20,7 @@ final class NativePasswordHasher implements PasswordHasher
         return password_hash($plain, $algo);
     }
 
+    #[\Override]
     public function verify(string $plain, string $hash): bool
     {
         return password_verify($plain, $hash);

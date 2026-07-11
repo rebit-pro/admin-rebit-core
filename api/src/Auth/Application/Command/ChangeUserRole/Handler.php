@@ -43,8 +43,13 @@ final readonly class Handler
             $this->users->updateUserRole($command->targetId, $command->newRole);
             $this->events->publish(new UserRoleChanged($command->targetId, $command->newRole, $this->clock->now()));
 
-            /** @var array<string, mixed> $updated */
-            return $this->users->managedUserById($command->targetId);
+            $updated = $this->users->managedUserById($command->targetId);
+
+            if (null === $updated) {
+                throw new HttpError('User not found.', 404);
+            }
+
+            return $updated;
         });
     }
 }

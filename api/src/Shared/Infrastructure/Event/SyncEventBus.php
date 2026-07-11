@@ -36,6 +36,7 @@ final class SyncEventBus implements EventPublisher
             : iterator_to_array($subscribers, false);
     }
 
+    #[\Override]
     public function publish(DomainEvent ...$events): void
     {
         foreach ($events as $event) {

@@ -13,21 +13,25 @@ final readonly class UserPasswordChanged implements DomainEvent
         private \DateTimeImmutable $occurredAt,
     ) {}
 
+    #[\Override]
     public function eventName(): string
     {
         return 'auth.user.password_changed';
     }
 
+    #[\Override]
     public function occurredAt(): \DateTimeImmutable
     {
         return $this->occurredAt;
     }
 
+    #[\Override]
     public function aggregateId(): string
     {
         return (string)$this->userId;
     }
 
+    #[\Override]
     public function payload(): array
     {
         // redaction: без хэшей/токенов/паролей (docs/01-scenarios.md §6.9)

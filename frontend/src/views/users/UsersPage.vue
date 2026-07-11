@@ -173,7 +173,9 @@ onMounted(load);
             <td>{{ item.email }}</td>
             <td>{{ item.login }}</td>
             <td>{{ item.name }}</td>
-            <td><v-chip size="small" variant="tonal" color="primary">{{ roleLabel(item.role) }}</v-chip></td>
+            <td>
+              <v-chip size="small" variant="tonal" color="primary">{{ roleLabel(item.role) }}</v-chip>
+            </td>
             <td>
               <v-chip size="small" variant="tonal" :color="item.status === 'active' ? 'success' : 'error'">
                 {{ item.status === 'active' ? 'Активен' : 'Заблокирован' }}
@@ -186,11 +188,7 @@ onMounted(load);
                 </template>
                 <v-list density="compact" min-width="200">
                   <v-list-subheader>Назначить роль</v-list-subheader>
-                  <v-list-item
-                    v-for="role in roleOptions.filter((r) => r !== item.role)"
-                    :key="role"
-                    @click="changeRole(item, role)"
-                  >
+                  <v-list-item v-for="role in roleOptions.filter((r) => r !== item.role)" :key="role" @click="changeRole(item, role)">
                     <v-list-item-title>{{ roleLabel(role) }}</v-list-item-title>
                   </v-list-item>
                   <v-divider class="my-1" />
@@ -228,7 +226,16 @@ onMounted(load);
             <v-text-field v-model="form.email" label="Email" type="email" variant="outlined" density="comfortable" class="mb-2" />
             <v-text-field v-model="form.login" label="Логин" variant="outlined" density="comfortable" class="mb-2" />
             <v-text-field v-model="form.name" label="Имя" variant="outlined" density="comfortable" class="mb-2" />
-            <v-text-field v-model="form.password" label="Пароль" type="password" variant="outlined" density="comfortable" hint="Минимум 8 символов" persistent-hint class="mb-2" />
+            <v-text-field
+              v-model="form.password"
+              label="Пароль"
+              type="password"
+              variant="outlined"
+              density="comfortable"
+              hint="Минимум 8 символов"
+              persistent-hint
+              class="mb-2"
+            />
             <v-select v-model="form.role" :items="roleOptions" label="Роль" variant="outlined" density="comfortable" class="mb-2">
               <template #selection="{ item }">{{ roleLabel(item.value) }}</template>
               <template #item="{ item, props }"><v-list-item v-bind="props" :title="roleLabel(item.value)" /></template>

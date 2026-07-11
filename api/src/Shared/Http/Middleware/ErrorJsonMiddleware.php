@@ -26,6 +26,7 @@ final readonly class ErrorJsonMiddleware implements MiddlewareInterface
         private LoggerInterface $logger,
     ) {}
 
+    #[\Override]
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         try {
