@@ -21,8 +21,7 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
     public function __construct(
         private AuthService $auth,
         private ActorContext $actor,
-    ) {
-    }
+    ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
@@ -31,7 +30,7 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
         $server = $request->getServerParams();
         $userAgent = $request->getHeaderLine('User-Agent');
         $this->actor->set(
-            (string) $identity->id,
+            (string)$identity->id,
             isset($server['REMOTE_ADDR']) && is_string($server['REMOTE_ADDR']) ? $server['REMOTE_ADDR'] : null,
             '' !== $userAgent ? $userAgent : null,
         );

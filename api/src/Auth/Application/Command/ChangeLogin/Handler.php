@@ -18,13 +18,12 @@ final readonly class Handler
         private UnitOfWork $unitOfWork,
         private EventPublisher $events,
         private Clock $clock,
-    ) {
-    }
+    ) {}
 
     /** @return array<string, mixed> Обновлённое представление пользователя. */
     public function handle(Command $command): array
     {
-        return $this->unitOfWork->transactional(function () use ($command): array {
+        return $this->unitOfWork->transactional(function() use ($command): array {
             $login = $this->normalizeLogin($command->login);
 
             if (null === $this->users->findUserById($command->userId)) {
@@ -57,6 +56,7 @@ final readonly class Handler
 
     /**
      * @param array<string, mixed> $user
+     *
      * @return array<string, mixed>
      */
     private function view(array $user): array

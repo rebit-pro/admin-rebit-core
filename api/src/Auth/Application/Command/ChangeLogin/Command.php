@@ -9,6 +9,5 @@ final readonly class Command
     public function __construct(
         public int $userId,
         public string $login,
-    ) {
-    }
+    ) {}
 }

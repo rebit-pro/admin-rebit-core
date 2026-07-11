@@ -4,31 +4,26 @@ declare(strict_types=1);
 
 namespace App\Auth;
 
-use DateTimeImmutable;
-use PDO;
-
 final readonly class AuthRepository
 {
-    public function __construct(private PDO $pdo)
-    {
-    }
+    public function __construct(private \PDO $pdo) {}
 
-    /** @return array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string}|null */
+    /** @return null|array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string} */
     public function findUserByEmailOrLogin(string $identifier): ?array
     {
         $statement = $this->pdo->prepare(
             'SELECT id, email, password_hash, name, role, login, phone, address, status
              FROM auth_users
              WHERE lower(email) = lower(:identifier) OR lower(login) = lower(:identifier)
-             LIMIT 1'
+             LIMIT 1',
         );
         $statement->execute(['identifier' => $identifier]);
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
 
         return false === $row ? null : $this->normalizeUserRow($row);
     }
 
-    /** @return array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string}|null */
+    /** @return null|array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string} */
     public function findUserByTokenHash(string $tokenHash): ?array
     {
         $statement = $this->pdo->prepare(
@@ -36,19 +31,19 @@ final readonly class AuthRepository
              FROM auth_access_tokens t
              INNER JOIN auth_users u ON u.id = t.user_id
              WHERE t.token_hash = :token_hash AND t.expires_at > CURRENT_TIMESTAMP
-             LIMIT 1'
+             LIMIT 1',
         );
         $statement->execute(['token_hash' => $tokenHash]);
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
 
         return false === $row ? null : $this->normalizeUserRow($row);
     }
 
-    public function storeAccessToken(string $tokenHash, int $userId, DateTimeImmutable $expiresAt): void
+    public function storeAccessToken(string $tokenHash, int $userId, \DateTimeImmutable $expiresAt): void
     {
         $statement = $this->pdo->prepare(
             'INSERT INTO auth_access_tokens (token_hash, user_id, expires_at)
-             VALUES (:token_hash, :user_id, :expires_at)'
+             VALUES (:token_hash, :user_id, :expires_at)',
         );
         $statement->execute([
             'token_hash' => $tokenHash,
@@ -68,8 +63,8 @@ final readonly class AuthRepository
         string $passwordHash,
         string $name,
         string $code,
-        DateTimeImmutable $codeExpiresAt,
-        DateTimeImmutable $resendAvailableAt,
+        \DateTimeImmutable $codeExpiresAt,
+        \DateTimeImmutable $resendAvailableAt,
     ): void {
         $statement = $this->pdo->prepare(
             'INSERT INTO auth_registration_codes (email, password_hash, name, code, code_expires_at, resend_available_at)
@@ -80,7 +75,7 @@ final readonly class AuthRepository
                 code = EXCLUDED.code,
                 code_expires_at = EXCLUDED.code_expires_at,
                 resend_available_at = EXCLUDED.resend_available_at,
-                updated_at = CURRENT_TIMESTAMP'
+                updated_at = CURRENT_TIMESTAMP',
         );
         $statement->execute([
             'email' => $email,
@@ -92,29 +87,29 @@ final readonly class AuthRepository
         ]);
     }
 
-    /** @return array{email:string,password_hash:string,name:string,code:string,code_expires_at:string,resend_available_at:string}|null */
+    /** @return null|array{email:string,password_hash:string,name:string,code:string,code_expires_at:string,resend_available_at:string} */
     public function findRegistrationCode(string $email): ?array
     {
         $statement = $this->pdo->prepare(
             'SELECT email, password_hash, name, code, code_expires_at, resend_available_at
              FROM auth_registration_codes
              WHERE lower(email) = lower(:email)
-             LIMIT 1'
+             LIMIT 1',
         );
         $statement->execute(['email' => $email]);
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
 
         if (false === $row) {
             return null;
         }
 
         return [
-            'email' => (string) $row['email'],
-            'password_hash' => (string) $row['password_hash'],
-            'name' => (string) $row['name'],
-            'code' => (string) $row['code'],
-            'code_expires_at' => (string) $row['code_expires_at'],
-            'resend_available_at' => (string) $row['resend_available_at'],
+            'email' => (string)$row['email'],
+            'password_hash' => (string)$row['password_hash'],
+            'name' => (string)$row['name'],
+            'code' => (string)$row['code'],
+            'code_expires_at' => (string)$row['code_expires_at'],
+            'resend_available_at' => (string)$row['resend_available_at'],
         ];
     }
 
@@ -139,7 +134,7 @@ final readonly class AuthRepository
                 phone = EXCLUDED.phone,
                 address = EXCLUDED.address,
                 updated_at = CURRENT_TIMESTAMP
-             RETURNING id, email, password_hash, name, role, login, phone, address'
+             RETURNING id, email, password_hash, name, role, login, phone, address',
         );
         $statement->execute([
             'email' => $email,
@@ -152,7 +147,7 @@ final readonly class AuthRepository
         ]);
 
         /** @var array{id:mixed,email:mixed,password_hash:mixed,name:mixed,role:mixed,login:mixed,phone:mixed,address:mixed} $row */
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
 
         return $this->normalizeUserRow($row);
     }
@@ -163,15 +158,15 @@ final readonly class AuthRepository
         $statement->execute(['email' => $email]);
     }
 
-    /** @return array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string}|null */
+    /** @return null|array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string} */
     public function findUserById(int $id): ?array
     {
         $statement = $this->pdo->prepare(
             'SELECT id, email, password_hash, name, role, login, phone, address
-             FROM auth_users WHERE id = :id LIMIT 1'
+             FROM auth_users WHERE id = :id LIMIT 1',
         );
         $statement->execute(['id' => $id]);
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
 
         return false === $row ? null : $this->normalizeUserRow($row);
     }
@@ -179,7 +174,7 @@ final readonly class AuthRepository
     public function updatePassword(int $id, string $passwordHash): void
     {
         $statement = $this->pdo->prepare(
-            'UPDATE auth_users SET password_hash = :password_hash, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+            'UPDATE auth_users SET password_hash = :password_hash, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
         );
         $statement->execute(['password_hash' => $passwordHash, 'id' => $id]);
     }
@@ -187,7 +182,7 @@ final readonly class AuthRepository
     public function updateLogin(int $id, string $login): void
     {
         $statement = $this->pdo->prepare(
-            'UPDATE auth_users SET login = :login, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+            'UPDATE auth_users SET login = :login, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
         );
         $statement->execute(['login' => $login, 'id' => $id]);
     }
@@ -195,7 +190,7 @@ final readonly class AuthRepository
     public function updateEmail(int $id, string $email): void
     {
         $statement = $this->pdo->prepare(
-            'UPDATE auth_users SET email = :email, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+            'UPDATE auth_users SET email = :email, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
         );
         $statement->execute(['email' => $email, 'id' => $id]);
     }
@@ -203,7 +198,7 @@ final readonly class AuthRepository
     public function isLoginTaken(string $login, int $exceptId): bool
     {
         $statement = $this->pdo->prepare(
-            'SELECT 1 FROM auth_users WHERE lower(login) = lower(:login) AND id <> :id LIMIT 1'
+            'SELECT 1 FROM auth_users WHERE lower(login) = lower(:login) AND id <> :id LIMIT 1',
         );
         $statement->execute(['login' => $login, 'id' => $exceptId]);
 
@@ -213,7 +208,7 @@ final readonly class AuthRepository
     public function isEmailTaken(string $email, int $exceptId): bool
     {
         $statement = $this->pdo->prepare(
-            'SELECT 1 FROM auth_users WHERE lower(email) = lower(:email) AND id <> :id LIMIT 1'
+            'SELECT 1 FROM auth_users WHERE lower(email) = lower(:email) AND id <> :id LIMIT 1',
         );
         $statement->execute(['email' => $email, 'id' => $exceptId]);
 
@@ -238,7 +233,7 @@ final readonly class AuthRepository
         $statement = $this->pdo->prepare(
             "INSERT INTO auth_users (email, password_hash, name, role, login, phone, address, status)
              VALUES (:email, :password_hash, :name, :role, :login, :phone, :address, 'active')
-             RETURNING id"
+             RETURNING id",
         );
         $statement->execute([
             'email' => $email,
@@ -250,7 +245,7 @@ final readonly class AuthRepository
             'address' => $address,
         ]);
 
-        return (int) $statement->fetchColumn();
+        return (int)$statement->fetchColumn();
     }
 
     /** @return list<array<string, mixed>> */
@@ -267,7 +262,7 @@ final readonly class AuthRepository
         $statement = $this->pdo->prepare($sql);
         $statement->execute($params);
 
-        return array_map($this->managedRow(...), $statement->fetchAll(PDO::FETCH_ASSOC));
+        return array_map($this->managedRow(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
     public function countUsers(?string $search): int
@@ -276,33 +271,34 @@ final readonly class AuthRepository
         $statement = $this->pdo->prepare('SELECT COUNT(*) FROM auth_users ' . $where);
         $statement->execute($params);
 
-        return (int) $statement->fetchColumn();
+        return (int)$statement->fetchColumn();
     }
 
-    /** @return array<string, mixed>|null */
+    /** @return null|array<string, mixed> */
     public function managedUserById(int $id): ?array
     {
         $statement = $this->pdo->prepare(
             'SELECT id, email, login, name, role, status, phone, address, created_at
-             FROM auth_users WHERE id = :id LIMIT 1'
+             FROM auth_users WHERE id = :id LIMIT 1',
         );
         $statement->execute(['id' => $id]);
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
 
         return false === $row ? null : $this->managedRow($row);
     }
 
     public function countActiveOwners(): int
     {
-        return (int) $this->pdo
+        return (int)$this->pdo
             ->query("SELECT COUNT(*) FROM auth_users WHERE role = 'owner' AND status = 'active'")
-            ->fetchColumn();
+            ->fetchColumn()
+        ;
     }
 
     public function updateUserRole(int $id, string $role): void
     {
         $statement = $this->pdo->prepare(
-            'UPDATE auth_users SET role = :role, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+            'UPDATE auth_users SET role = :role, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
         );
         $statement->execute(['role' => $role, 'id' => $id]);
     }
@@ -310,7 +306,7 @@ final readonly class AuthRepository
     public function setUserStatus(int $id, string $status): void
     {
         $statement = $this->pdo->prepare(
-            'UPDATE auth_users SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+            'UPDATE auth_users SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
         );
         $statement->execute(['status' => $status, 'id' => $id]);
     }
@@ -319,40 +315,6 @@ final readonly class AuthRepository
     {
         $statement = $this->pdo->prepare('DELETE FROM auth_users WHERE id = :id');
         $statement->execute(['id' => $id]);
-    }
-
-    /**
-     * @return array{0:string, 1:array<string, string>}
-     */
-    private function searchClause(?string $search): array
-    {
-        if (null === $search || '' === trim($search)) {
-            return ['', []];
-        }
-
-        return [
-            'WHERE email ILIKE :s OR login ILIKE :s OR name ILIKE :s',
-            ['s' => '%' . trim($search) . '%'],
-        ];
-    }
-
-    /**
-     * @param array<string, mixed> $row
-     * @return array<string, mixed>
-     */
-    private function managedRow(array $row): array
-    {
-        return [
-            'id' => (int) $row['id'],
-            'email' => (string) $row['email'],
-            'login' => (string) $row['login'],
-            'name' => (string) $row['name'],
-            'role' => (string) $row['role'],
-            'status' => (string) $row['status'],
-            'phone' => null === $row['phone'] ? null : (string) $row['phone'],
-            'address' => null === $row['address'] ? null : (string) $row['address'],
-            'createdAt' => (string) $row['created_at'],
-        ];
     }
 
     public function transaction(callable $callback): mixed
@@ -372,21 +334,57 @@ final readonly class AuthRepository
     }
 
     /**
+     * @return array{0:string, 1:array<string, string>}
+     */
+    private function searchClause(?string $search): array
+    {
+        if (null === $search || '' === trim($search)) {
+            return ['', []];
+        }
+
+        return [
+            'WHERE email ILIKE :s OR login ILIKE :s OR name ILIKE :s',
+            ['s' => '%' . trim($search) . '%'],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     *
+     * @return array<string, mixed>
+     */
+    private function managedRow(array $row): array
+    {
+        return [
+            'id' => (int)$row['id'],
+            'email' => (string)$row['email'],
+            'login' => (string)$row['login'],
+            'name' => (string)$row['name'],
+            'role' => (string)$row['role'],
+            'status' => (string)$row['status'],
+            'phone' => null === $row['phone'] ? null : (string)$row['phone'],
+            'address' => null === $row['address'] ? null : (string)$row['address'],
+            'createdAt' => (string)$row['created_at'],
+        ];
+    }
+
+    /**
      * @param array{id:mixed,email:mixed,password_hash:mixed,name:mixed,role:mixed,login:mixed,phone:mixed,address:mixed} $row
+     *
      * @return array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string}
      */
     private function normalizeUserRow(array $row): array
     {
         return [
-            'id' => (int) $row['id'],
-            'email' => (string) $row['email'],
-            'password_hash' => (string) $row['password_hash'],
-            'name' => (string) $row['name'],
-            'role' => (string) $row['role'],
-            'login' => (string) $row['login'],
-            'phone' => null === $row['phone'] ? null : (string) $row['phone'],
-            'address' => null === $row['address'] ? null : (string) $row['address'],
-            'status' => (string) ($row['status'] ?? 'active'),
+            'id' => (int)$row['id'],
+            'email' => (string)$row['email'],
+            'password_hash' => (string)$row['password_hash'],
+            'name' => (string)$row['name'],
+            'role' => (string)$row['role'],
+            'login' => (string)$row['login'],
+            'phone' => null === $row['phone'] ? null : (string)$row['phone'],
+            'address' => null === $row['address'] ? null : (string)$row['address'],
+            'status' => (string)($row['status'] ?? 'active'),
         ];
     }
 }

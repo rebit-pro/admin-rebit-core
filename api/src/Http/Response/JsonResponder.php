@@ -39,6 +39,7 @@ final readonly class JsonResponder
 
         return $response
             ->withHeader('Content-Type', 'application/json; charset=utf-8')
-            ->withStatus($status);
+            ->withStatus($status)
+        ;
     }
 }

@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Shared\Persistence;
 
-use PDO;
-use RuntimeException;
-use Throwable;
-
 /**
  * Применяет *.sql-миграции по возрастанию имени, отмечая версии в schema_migrations.
  * Каждый файл — в отдельной транзакции.
@@ -15,14 +11,13 @@ use Throwable;
 final readonly class Migrator
 {
     public function __construct(
-        private PDO $pdo,
+        private \PDO $pdo,
         private string $migrationsPath,
-    ) {
-    }
+    ) {}
 
     public function migrate(): void
     {
-        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $driver = $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
         $executedAtDefinition = 'sqlite' === $driver
             ? 'TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP'
             : 'TIMESTAMPTZ NOT NULL DEFAULT now()';
@@ -48,7 +43,7 @@ final readonly class Migrator
             $sql = file_get_contents($file);
 
             if (false === $sql) {
-                throw new RuntimeException(sprintf('Cannot read migration %s.', $file));
+                throw new \RuntimeException(sprintf('Cannot read migration %s.', $file));
             }
 
             $this->pdo->beginTransaction();
@@ -58,7 +53,7 @@ final readonly class Migrator
                 $statement = $this->pdo->prepare('INSERT INTO schema_migrations (version) VALUES (:version)');
                 $statement->execute(['version' => $version]);
                 $this->pdo->commit();
-            } catch (Throwable $exception) {
+            } catch (\Throwable $exception) {
                 $this->pdo->rollBack();
 
                 throw $exception;

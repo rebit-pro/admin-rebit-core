@@ -11,6 +11,5 @@ final readonly class Command
         public int $actorId,
         public int $targetId,
         public string $status,
-    ) {
-    }
+    ) {}
 }

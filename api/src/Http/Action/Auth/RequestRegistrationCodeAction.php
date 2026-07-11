@@ -15,8 +15,7 @@ final readonly class RequestRegistrationCodeAction
     public function __construct(
         private AuthService $authService,
         private JsonResponder $responder,
-    ) {
-    }
+    ) {}
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {

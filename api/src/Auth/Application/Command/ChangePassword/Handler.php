@@ -22,13 +22,12 @@ final readonly class Handler
         private UnitOfWork $unitOfWork,
         private EventPublisher $events,
         private Clock $clock,
-    ) {
-    }
+    ) {}
 
     /** @return array{token:string,expiresAt:string} */
     public function handle(Command $command): array
     {
-        return $this->unitOfWork->transactional(function () use ($command): array {
+        return $this->unitOfWork->transactional(function() use ($command): array {
             $user = $this->users->findUserById($command->userId);
 
             if (null === $user) {

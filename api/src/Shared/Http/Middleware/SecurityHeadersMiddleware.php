@@ -23,6 +23,7 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
             ->withHeader('X-Content-Type-Options', 'nosniff')
             ->withHeader('X-Frame-Options', 'DENY')
             ->withHeader('Referrer-Policy', 'no-referrer')
-            ->withHeader('X-Permitted-Cross-Domain-Policies', 'none');
+            ->withHeader('X-Permitted-Cross-Domain-Policies', 'none')
+        ;
     }
 }

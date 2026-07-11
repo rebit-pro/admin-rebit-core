@@ -11,9 +11,7 @@ use App\Auth\AuthRepository;
  */
 final readonly class Fetcher
 {
-    public function __construct(private AuthRepository $users)
-    {
-    }
+    public function __construct(private AuthRepository $users) {}
 
     /** @return array{items:list<array<string,mixed>>,total:int,page:int,perPage:int} */
     public function fetch(int $page, int $perPage, ?string $search): array

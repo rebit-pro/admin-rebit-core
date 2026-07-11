@@ -9,9 +9,11 @@ use App\Audit\Application\Port\AuditLog;
 use App\Auth\Domain\Event\UserCreated;
 use App\Shared\Application\ActorContext;
 use App\Shared\Application\Event\SubscriberPhase;
-use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class AuditSubscriberTest extends TestCase
 {
     public function testRunsInTransaction(): void
@@ -27,7 +29,7 @@ final class AuditSubscriberTest extends TestCase
         $actor->set('5', '127.0.0.1', 'UA/1.0');
 
         $subscriber = new AuditSubscriber($this->auditLog($captured), $actor);
-        $subscriber->handle(new UserCreated(42, 'admin', new DateTimeImmutable('2026-01-01T00:00:00+00:00')));
+        $subscriber->handle(new UserCreated(42, 'admin', new \DateTimeImmutable('2026-01-01T00:00:00+00:00')));
 
         self::assertSame(5, $captured['actorId']);
         self::assertSame('auth.user.created', $captured['action']);

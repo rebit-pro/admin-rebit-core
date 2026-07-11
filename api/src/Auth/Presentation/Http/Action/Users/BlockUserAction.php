@@ -16,8 +16,7 @@ final readonly class BlockUserAction
     public function __construct(
         private Handler $handler,
         private JsonResponder $responder,
-    ) {
-    }
+    ) {}
 
     /** @param array<string, string> $args */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
@@ -25,7 +24,7 @@ final readonly class BlockUserAction
         /** @var Identity $actor */
         $actor = $request->getAttribute('identity');
 
-        $user = $this->handler->handle(new Command($actor->role, $actor->id, (int) $args['id'], 'blocked'));
+        $user = $this->handler->handle(new Command($actor->role, $actor->id, (int)$args['id'], 'blocked'));
 
         return $this->responder->success($response, $user);
     }

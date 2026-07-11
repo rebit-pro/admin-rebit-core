@@ -14,8 +14,7 @@ final readonly class Identity
         public string $login,
         public ?string $phone,
         public ?string $address,
-    ) {
-    }
+    ) {}
 
     /** @return array{id:int,email:string,name:string,role:string,login:string,phone:?string,address:?string} */
     public function toArray(): array

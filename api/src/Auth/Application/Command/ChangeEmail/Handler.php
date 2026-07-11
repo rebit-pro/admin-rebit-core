@@ -20,13 +20,12 @@ final readonly class Handler
         private UnitOfWork $unitOfWork,
         private EventPublisher $events,
         private Clock $clock,
-    ) {
-    }
+    ) {}
 
     /** @return array<string, mixed> Обновлённое представление пользователя. */
     public function handle(Command $command): array
     {
-        return $this->unitOfWork->transactional(function () use ($command): array {
+        return $this->unitOfWork->transactional(function() use ($command): array {
             $email = $this->normalizeEmail($command->newEmail);
             $user = $this->users->findUserById($command->userId);
 

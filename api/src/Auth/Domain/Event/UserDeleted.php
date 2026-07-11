@@ -5,29 +5,27 @@ declare(strict_types=1);
 namespace App\Auth\Domain\Event;
 
 use App\Shared\Domain\Event\DomainEvent;
-use DateTimeImmutable;
 
 final readonly class UserDeleted implements DomainEvent
 {
     public function __construct(
         private int $userId,
-        private DateTimeImmutable $occurredAt,
-    ) {
-    }
+        private \DateTimeImmutable $occurredAt,
+    ) {}
 
     public function eventName(): string
     {
         return 'auth.user.deleted';
     }
 
-    public function occurredAt(): DateTimeImmutable
+    public function occurredAt(): \DateTimeImmutable
     {
         return $this->occurredAt;
     }
 
     public function aggregateId(): string
     {
-        return (string) $this->userId;
+        return (string)$this->userId;
     }
 
     public function payload(): array

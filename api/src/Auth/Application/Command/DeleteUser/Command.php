@@ -10,6 +10,5 @@ final readonly class Command
         public string $actorRole,
         public int $actorId,
         public int $targetId,
-    ) {
-    }
+    ) {}
 }

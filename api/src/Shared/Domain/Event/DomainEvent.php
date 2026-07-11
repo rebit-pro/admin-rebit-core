@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Shared\Domain\Event;
 
-use DateTimeImmutable;
-
 /**
  * Доменное событие — факт свершившегося изменения агрегата.
  * Контракт см. docs/02-domain.md §8.
@@ -14,7 +12,7 @@ interface DomainEvent
 {
     public function eventName(): string;
 
-    public function occurredAt(): DateTimeImmutable;
+    public function occurredAt(): \DateTimeImmutable;
 
     public function aggregateId(): string;
 

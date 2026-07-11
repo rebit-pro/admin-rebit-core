@@ -14,8 +14,7 @@ final readonly class LogoutAction
     public function __construct(
         private AuthService $authService,
         private JsonResponder $responder,
-    ) {
-    }
+    ) {}
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {

@@ -22,8 +22,7 @@ final readonly class RequirePermissionMiddleware implements MiddlewareInterface
     public function __construct(
         private AccessDecision $access,
         private Permission $permission,
-    ) {
-    }
+    ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {

@@ -15,6 +15,5 @@ final readonly class Command
         public string $role,
         public ?string $phone = null,
         public ?string $address = null,
-    ) {
-    }
+    ) {}
 }

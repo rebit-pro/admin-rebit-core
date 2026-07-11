@@ -27,7 +27,7 @@ use function DI\get;
  * UnitOfWork, часы, мигратор. Подписчиков в шину добавляем при вводе Audit (#12).
  */
 return [
-    LoggerInterface::class => static function (): LoggerInterface {
+    LoggerInterface::class => static function(): LoggerInterface {
         $logger = new Logger('app');
         $handler = new StreamHandler('php://stderr', Level::Debug);
         $handler->setFormatter(new JsonFormatter());
@@ -40,7 +40,7 @@ return [
 
     Clock::class => get(SystemClock::class),
 
-    SyncEventBus::class => static fn (ContainerInterface $c): SyncEventBus => new SyncEventBus(
+    SyncEventBus::class => static fn(ContainerInterface $c): SyncEventBus => new SyncEventBus(
         [$c->get(AuditSubscriber::class)],
         $c->get(LoggerInterface::class),
     ),
@@ -48,7 +48,7 @@ return [
 
     UnitOfWork::class => get(PdoUnitOfWork::class),
 
-    Migrator::class => static fn (ContainerInterface $c): Migrator => new Migrator(
+    Migrator::class => static fn(ContainerInterface $c): Migrator => new Migrator(
         $c->get(PDO::class),
         dirname(__DIR__, 2) . '/migrations',
     ),

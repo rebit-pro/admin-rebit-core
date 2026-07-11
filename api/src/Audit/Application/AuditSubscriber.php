@@ -27,8 +27,7 @@ final readonly class AuditSubscriber implements EventSubscriber
     public function __construct(
         private AuditLog $audit,
         private ActorContext $actor,
-    ) {
-    }
+    ) {}
 
     public function subscribedTo(): array
     {
@@ -53,7 +52,7 @@ final readonly class AuditSubscriber implements EventSubscriber
         $actorId = $this->actor->actorId();
 
         $this->audit->append(
-            null === $actorId ? null : (int) $actorId,
+            null === $actorId ? null : (int)$actorId,
             $event->eventName(),
             $this->subjectType($event->eventName()),
             $event->aggregateId(),

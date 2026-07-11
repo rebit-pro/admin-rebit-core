@@ -20,19 +20,18 @@ final readonly class Handler
         private UnitOfWork $unitOfWork,
         private EventPublisher $events,
         private Clock $clock,
-    ) {
-    }
+    ) {}
 
     public function handle(Command $command): void
     {
-        $this->unitOfWork->transactional(function () use ($command): void {
+        $this->unitOfWork->transactional(function() use ($command): void {
             $target = $this->users->managedUserById($command->targetId);
 
             if (null === $target) {
                 throw new HttpError('User not found.', 404);
             }
 
-            $this->policy->ensureCanManage($command->actorRole, (string) $target['role']);
+            $this->policy->ensureCanManage($command->actorRole, (string)$target['role']);
             $this->policy->ensureNotSelf($command->actorId, $command->targetId);
             $this->policy->ensureNotLastActiveOwner($target, $this->users->countActiveOwners());
 

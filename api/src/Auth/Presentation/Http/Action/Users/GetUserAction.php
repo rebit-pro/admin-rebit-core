@@ -15,13 +15,12 @@ final readonly class GetUserAction
     public function __construct(
         private AuthRepository $users,
         private JsonResponder $responder,
-    ) {
-    }
+    ) {}
 
     /** @param array<string, string> $args */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
-        $user = $this->users->managedUserById((int) $args['id']);
+        $user = $this->users->managedUserById((int)$args['id']);
 
         if (null === $user) {
             throw new HttpError('User not found.', 404);

@@ -13,7 +13,9 @@ interface UnitOfWork
 {
     /**
      * @template T
+     *
      * @param callable():T $work
+     *
      * @return T
      */
     public function transactional(callable $work): mixed;

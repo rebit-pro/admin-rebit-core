@@ -20,20 +20,19 @@ final readonly class Handler
         private UnitOfWork $unitOfWork,
         private EventPublisher $events,
         private Clock $clock,
-    ) {
-    }
+    ) {}
 
     /** @return array<string, mixed> */
     public function handle(Command $command): array
     {
-        return $this->unitOfWork->transactional(function () use ($command): array {
+        return $this->unitOfWork->transactional(function() use ($command): array {
             $target = $this->users->managedUserById($command->targetId);
 
             if (null === $target) {
                 throw new HttpError('User not found.', 404);
             }
 
-            $this->policy->ensureCanManage($command->actorRole, (string) $target['role']);
+            $this->policy->ensureCanManage($command->actorRole, (string)$target['role']);
             $this->policy->ensureCanAssignRole($command->actorRole, $command->newRole);
 
             // Демоушен owner → проверка «последнего активного owner».
@@ -45,9 +44,7 @@ final readonly class Handler
             $this->events->publish(new UserRoleChanged($command->targetId, $command->newRole, $this->clock->now()));
 
             /** @var array<string, mixed> $updated */
-            $updated = $this->users->managedUserById($command->targetId);
-
-            return $updated;
+            return $this->users->managedUserById($command->targetId);
         });
     }
 }

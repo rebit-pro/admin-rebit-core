@@ -2,11 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Http\Action\Auth\ConfirmRegistrationAction;
-use App\Http\Action\Auth\CurrentUserAction;
-use App\Http\Action\Auth\LoginAction;
-use App\Http\Action\Auth\LogoutAction;
-use App\Http\Action\Auth\RequestRegistrationCodeAction;
 use App\Access\Application\AccessDecision;
 use App\Access\Domain\Permission;
 use App\Access\Presentation\Http\Middleware\RequirePermissionMiddleware;
@@ -21,13 +16,18 @@ use App\Auth\Presentation\Http\Action\Users\ListUsersAction;
 use App\Auth\Presentation\Http\Action\Users\UnblockUserAction;
 use App\Auth\Presentation\Http\Action\Users\UpdateUserAction;
 use App\Auth\Presentation\Http\Middleware\AuthenticationMiddleware;
+use App\Http\Action\Auth\ConfirmRegistrationAction;
+use App\Http\Action\Auth\CurrentUserAction;
+use App\Http\Action\Auth\LoginAction;
+use App\Http\Action\Auth\LogoutAction;
+use App\Http\Action\Auth\RequestRegistrationCodeAction;
 use App\Http\Action\HealthAction;
 use Slim\App;
 
-return static function (App $app): void {
+return static function(App $app): void {
     $app->get('/health', HealthAction::class);
 
-    $app->group('/api/v1/auth', function ($group): void {
+    $app->group('/api/v1/auth', function($group): void {
         $group->post('/login', LoginAction::class);
         $group->post('/register/request-code', RequestRegistrationCodeAction::class);
         $group->post('/register/confirm', ConfirmRegistrationAction::class);
@@ -36,7 +36,7 @@ return static function (App $app): void {
     });
 
     // Управление своей учётной записью — за Bearer-аутентификацией.
-    $app->group('/api/v1/account', function ($group): void {
+    $app->group('/api/v1/account', function($group): void {
         $group->post('/change-password', ChangePasswordAction::class);
         $group->post('/change-login', ChangeLoginAction::class);
         $group->post('/change-email', ChangeEmailAction::class);
@@ -44,7 +44,7 @@ return static function (App $app): void {
 
     // Управление пользователями — требует права users.manage (RBAC) поверх аутентификации.
     $container = $app->getContainer();
-    $app->group('/api/v1/users', function ($group): void {
+    $app->group('/api/v1/users', function($group): void {
         $group->get('', ListUsersAction::class);
         $group->post('', CreateUserAction::class);
         $group->get('/{id:[0-9]+}', GetUserAction::class);
@@ -54,5 +54,6 @@ return static function (App $app): void {
         $group->delete('/{id:[0-9]+}', DeleteUserAction::class);
     })
         ->add(new RequirePermissionMiddleware($container->get(AccessDecision::class), Permission::UsersManage))
-        ->add(AuthenticationMiddleware::class);
+        ->add(AuthenticationMiddleware::class)
+    ;
 };

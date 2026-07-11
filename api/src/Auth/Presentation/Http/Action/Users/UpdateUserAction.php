@@ -16,19 +16,18 @@ final readonly class UpdateUserAction
     public function __construct(
         private Handler $handler,
         private JsonResponder $responder,
-    ) {
-    }
+    ) {}
 
     /** @param array<string, string> $args */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
         /** @var Identity $actor */
         $actor = $request->getAttribute('identity');
-        $body = (array) ($request->getParsedBody() ?? []);
+        $body = (array)($request->getParsedBody() ?? []);
 
         $user = $this->handler->handle(new Command(
             $actor->role,
-            (int) $args['id'],
+            (int)$args['id'],
             is_string($body['role'] ?? null) ? $body['role'] : '',
         ));
 

@@ -16,14 +16,13 @@ final readonly class ChangePasswordAction
     public function __construct(
         private Handler $handler,
         private JsonResponder $responder,
-    ) {
-    }
+    ) {}
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         /** @var Identity $identity */
         $identity = $request->getAttribute('identity');
-        $body = (array) ($request->getParsedBody() ?? []);
+        $body = (array)($request->getParsedBody() ?? []);
 
         $result = $this->handler->handle(new Command(
             $identity->id,

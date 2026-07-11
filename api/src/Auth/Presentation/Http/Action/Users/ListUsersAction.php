@@ -14,8 +14,7 @@ final readonly class ListUsersAction
     public function __construct(
         private Fetcher $fetcher,
         private JsonResponder $responder,
-    ) {
-    }
+    ) {}
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
@@ -23,8 +22,8 @@ final readonly class ListUsersAction
         $search = isset($query['search']) && is_string($query['search']) ? $query['search'] : null;
 
         $data = $this->fetcher->fetch(
-            (int) ($query['page'] ?? 1),
-            (int) ($query['perPage'] ?? 20),
+            (int)($query['page'] ?? 1),
+            (int)($query['perPage'] ?? 20),
             $search,
         );
 

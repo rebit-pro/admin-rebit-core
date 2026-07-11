@@ -7,15 +7,13 @@ namespace App\Shared\Infrastructure\Persistence;
 use App\Shared\Application\Transaction\UnitOfWork;
 use App\Shared\Infrastructure\Event\SyncEventBus;
 use PDO;
-use Throwable;
 
 final readonly class PdoUnitOfWork implements UnitOfWork
 {
     public function __construct(
-        private PDO $pdo,
+        private \PDO $pdo,
         private SyncEventBus $bus,
-    ) {
-    }
+    ) {}
 
     public function transactional(callable $work): mixed
     {
@@ -29,7 +27,7 @@ final readonly class PdoUnitOfWork implements UnitOfWork
         try {
             $result = $work();
             $this->pdo->commit();
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }

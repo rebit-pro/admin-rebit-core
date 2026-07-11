@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Auth;
 
-use DateTimeImmutable;
-
 final readonly class AuthService
 {
     private const TOKEN_TTL = '+24 hours';
@@ -14,8 +12,7 @@ final readonly class AuthService
     public function __construct(
         private AuthRepository $repository,
         private TokenFactory $tokenFactory,
-    ) {
-    }
+    ) {}
 
     /** @param array<string, mixed> $payload */
     public function login(array $payload): array
@@ -42,8 +39,8 @@ final readonly class AuthService
         $email = $this->requiredEmail($payload['email'] ?? null);
         $password = $this->requiredPassword($payload['password'] ?? null);
         $name = $this->nameFromEmail($email);
-        $codeExpiresAt = new DateTimeImmutable('+15 minutes');
-        $resendAvailableAt = new DateTimeImmutable('+1 minute');
+        $codeExpiresAt = new \DateTimeImmutable('+15 minutes');
+        $resendAvailableAt = new \DateTimeImmutable('+1 minute');
 
         $this->repository->storeRegistrationCode(
             $email,
@@ -67,7 +64,7 @@ final readonly class AuthService
         $email = $this->requiredEmail($payload['email'] ?? null);
         $code = $this->requiredString($payload['code'] ?? null, 'Confirmation code is required.');
 
-        return $this->repository->transaction(function () use ($email, $code): array {
+        return $this->repository->transaction(function() use ($email, $code): array {
             $registration = $this->repository->findRegistrationCode($email);
 
             if (null === $registration) {
@@ -78,7 +75,7 @@ final readonly class AuthService
                 throw new AuthException('Invalid confirmation code.', 422);
             }
 
-            if (new DateTimeImmutable($registration['code_expires_at']) <= new DateTimeImmutable()) {
+            if (new \DateTimeImmutable($registration['code_expires_at']) <= new \DateTimeImmutable()) {
                 throw new AuthException('Confirmation code has expired.', 422);
             }
 
@@ -134,7 +131,7 @@ final readonly class AuthService
     private function issueToken(array $user): array
     {
         $token = $this->tokenFactory->create();
-        $expiresAt = new DateTimeImmutable(self::TOKEN_TTL);
+        $expiresAt = new \DateTimeImmutable(self::TOKEN_TTL);
         $this->repository->storeAccessToken($this->tokenFactory->hash($token), $user['id'], $expiresAt);
 
         return [

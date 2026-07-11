@@ -9,7 +9,6 @@ use App\Shared\Application\Event\EventSubscriber;
 use App\Shared\Application\Event\SubscriberPhase;
 use App\Shared\Domain\Event\DomainEvent;
 use Psr\Log\LoggerInterface;
-use Throwable;
 
 /**
  * Синхронная in-process шина событий.
@@ -58,7 +57,7 @@ final class SyncEventBus implements EventPublisher
             foreach ($this->matching($event, SubscriberPhase::AfterCommit) as $subscriber) {
                 try {
                     $subscriber->handle($event);
-                } catch (Throwable $exception) {
+                } catch (\Throwable $exception) {
                     $this->logger?->error('After-commit subscriber failed', [
                         'event' => $event->eventName(),
                         'subscriber' => $subscriber::class,

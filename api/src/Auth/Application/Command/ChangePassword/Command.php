@@ -11,6 +11,5 @@ final readonly class Command
         public string $currentPassword,
         public string $newPassword,
         public string $newPasswordConfirmation,
-    ) {
-    }
+    ) {}
 }

@@ -7,7 +7,7 @@ declare(strict_types=1);
  * только для локального fallback (упраздняется вместе с migrations/sqlite).
  */
 return [
-    PDO::class => static function (): PDO {
+    PDO::class => static function(): PDO {
         $root = dirname(__DIR__, 2);
         $connection = $_ENV['DB_CONNECTION'] ?? 'pgsql';
 

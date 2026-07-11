@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Auth;
 
 use App\Shared\Http\HttpException;
-use RuntimeException;
 
-final class AuthException extends RuntimeException implements HttpException
+final class AuthException extends \RuntimeException implements HttpException
 {
     public function __construct(
         string $message,

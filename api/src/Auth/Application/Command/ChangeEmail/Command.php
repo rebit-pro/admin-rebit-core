@@ -10,6 +10,5 @@ final readonly class Command
         public int $userId,
         public string $newEmail,
         public string $currentPassword,
-    ) {
-    }
+    ) {}
 }

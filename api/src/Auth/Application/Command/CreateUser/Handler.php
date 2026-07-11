@@ -22,13 +22,12 @@ final readonly class Handler
         private UnitOfWork $unitOfWork,
         private EventPublisher $events,
         private Clock $clock,
-    ) {
-    }
+    ) {}
 
     /** @return array<string, mixed> */
     public function handle(Command $command): array
     {
-        return $this->unitOfWork->transactional(function () use ($command): array {
+        return $this->unitOfWork->transactional(function() use ($command): array {
             $this->policy->ensureCanAssignRole($command->actorRole, $command->role);
 
             $email = $this->email($command->email);
@@ -64,9 +63,7 @@ final readonly class Handler
             $this->events->publish(new UserCreated($id, $command->role, $this->clock->now()));
 
             /** @var array<string, mixed> $created */
-            $created = $this->users->managedUserById($id);
-
-            return $created;
+            return $this->users->managedUserById($id);
         });
     }
 

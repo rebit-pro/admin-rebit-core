@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Test\Shared\Domain\ValueObject;
 
 use App\Shared\Domain\ValueObject\Id;
-use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class IdTest extends TestCase
 {
     public function testGeneratesValidUuidV7(): void
@@ -40,7 +42,7 @@ final class IdTest extends TestCase
 
     public function testRejectsInvalidUuid(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
         new Id('not-a-uuid');
     }

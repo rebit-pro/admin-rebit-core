@@ -16,14 +16,13 @@ final readonly class CreateUserAction
     public function __construct(
         private Handler $handler,
         private JsonResponder $responder,
-    ) {
-    }
+    ) {}
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         /** @var Identity $actor */
         $actor = $request->getAttribute('identity');
-        $body = (array) ($request->getParsedBody() ?? []);
+        $body = (array)($request->getParsedBody() ?? []);
 
         $user = $this->handler->handle(new Command(
             $actor->role,
