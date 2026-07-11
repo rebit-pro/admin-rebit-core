@@ -30,8 +30,9 @@ api-fixtures:
 api-test:
 	docker compose exec -T app php vendor/bin/phpunit
 
+# composer в образе app отсутствует — линтуем напрямую через php -l
 api-lint:
-	docker compose exec -T app composer lint
+	docker compose exec -T app sh -c 'php -l public/index.php > /dev/null && find src config tests bin -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null && echo "Lint OK"'
 
 api-fixer:
 	docker compose exec -T app php vendor/bin/php-cs-fixer fix

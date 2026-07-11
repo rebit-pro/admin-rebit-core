@@ -81,7 +81,7 @@ make up / down / restart / build / logs   # жизненный цикл
 make api-migrate                          # миграции
 make api-fixtures                         # фикстуры
 make api-test                             # PHPUnit в контейнере
-make api-lint                             # composer lint (php -l)
+make api-lint                             # php -l по src/config/tests/bin/public
 make api-fixer                            # php-cs-fixer fix (конфиг api/.php-cs-fixer.dist.php)
 make api-cli                              # shell в контейнере app
 make frontend-check                       # vue-tsc typecheck
