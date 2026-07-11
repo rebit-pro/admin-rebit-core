@@ -1,0 +1,121 @@
+@use '../variables' as *;
+
+.v-field--variant-outlined {
+  .v-field__outline__start.v-locale--is-ltr {
+    border-radius: $border-radius-root 0 0 $border-radius-root;
+  }
+  .v-field__outline__end.v-locale--is-ltr {
+    border-radius: 0 $border-radius-root $border-radius-root 0;
+  }
+  .v-field__outline__start.v-locale--is-rtl {
+    border-radius: 0 $border-radius-root $border-radius-root 0;
+  }
+  .v-field__outline__end.v-locale--is-rtl {
+    border-radius: $border-radius-root 0 0 $border-radius-root;
+  }
+  .v-number-input__control {
+    .v-btn {
+      &:last-child {
+        border-radius: 0 $border-radius-root $border-radius-root 0;
+      }
+    }
+  }
+  &.v-locale--is-rtl {
+    .v-number-input__control {
+      .v-btn {
+        &:last-child {
+          border-radius: $border-radius-root 0 0 $border-radius-root;
+        }
+      }
+    }
+  }
+}
+.v-input--density-default {
+  .v-field--variant-outlined,
+  .v-field--single-line,
+  .v-field--no-label {
+    --v-field-padding-bottom: 12px;
+  }
+}
+.v-locale--is-ltr {
+  .v-field--variant-outlined {
+    .v-field__outline__start {
+      border-radius: $border-radius-root 0 0 $border-radius-root;
+    }
+    .v-field__outline__end {
+      border-radius: 0 $border-radius-root $border-radius-root 0;
+    }
+  }
+  .v-field--variant-outlined.v-field--reverse {
+    .v-field__outline__start {
+      border-radius: 0 $border-radius-root $border-radius-root 0;
+    }
+    .v-field__outline__end {
+      border-radius: $border-radius-root 0 0 $border-radius-root;
+    }
+  }
+}
+.v-locale--is-rtl {
+  .v-field--variant-outlined {
+    .v-field__outline__start {
+      border-radius: 0 $border-radius-root $border-radius-root 0;
+    }
+    .v-field__outline__end {
+      border-radius: $border-radius-root 0 0 $border-radius-root;
+    }
+  }
+  .v-field--variant-outlined.v-field--reverse {
+    .v-field__outline__start {
+      border-radius: $border-radius-root 0 0 $border-radius-root;
+    }
+    .v-field__outline__end {
+      border-radius: 0 $border-radius-root $border-radius-root 0;
+    }
+  }
+}
+.v-field--variant-outlined.v-field--reverse {
+  .v-field__outline__start.v-locale--is-ltr {
+    border-radius: 0 $border-radius-root $border-radius-root 0;
+  }
+  .v-field__outline__end.v-locale--is-ltr {
+    border-radius: $border-radius-root 0 0 $border-radius-root;
+  }
+  .v-field__outline__start.v-locale--is-rtl {
+    border-radius: $border-radius-root 0 0 $border-radius-root;
+  }
+  .v-field__outline__end.v-locale--is-rtl {
+    border-radius: 0 $border-radius-root $border-radius-root 0;
+  }
+  .v-number-input__control {
+    .v-btn {
+      &:last-child {
+        border-radius: 0;
+      }
+      &:first-child {
+        border-radius: $border-radius-root 0 0 $border-radius-root;
+      }
+    }
+  }
+  &.v-locale--is-rtl {
+    .v-number-input__control {
+      .v-btn {
+        &:last-child {
+          border-radius: 0;
+        }
+        &:first-child {
+          border-radius: 0 $border-radius-root $border-radius-root 0;
+        }
+      }
+    }
+  }
+}
+
+.v-file-input {
+  .v-field__input {
+    .v-chip {
+      max-width: unset;
+      min-width: unset;
+      overflow: unset;
+    }
+  }
+}

@@ -1,0 +1,99 @@
+.DarkPurpleTheme,
+.DarkGreenTheme,
+.DarkPinkTheme,
+.DarkYellowTheme,
+.DarkSeaGreenTheme,
+.DarkOliveGreenTheme,
+.DarkSpeechBlueTheme,
+.v-theme--DarkPurpleTheme {
+  .apexcharts-tooltip {
+    &.apexcharts-theme-light {
+      background-color: rgb(var(--v-theme-containerBg));
+      border: 1px solid rgb(var(--v-theme-borderlight));
+      .apexcharts-tooltip-title {
+        background: rgb(var(--v-theme-surface));
+        border-bottom: 1px solid rgb(var(--v-theme-borderlight));
+      }
+    }
+  }
+
+  .bgpattern {
+    background: url('@/assets/images/auth/auth-pattern-dark.svg') rgb(var(--v-theme-background)) repeat;
+  }
+
+  .apexcharts-menu {
+    background-color: rgb(var(--v-theme-containerBg));
+    border: 1px solid rgb(var(--v-theme-borderlight));
+  }
+
+  .apexcharts-theme-light {
+    .apexcharts-menu-item {
+      &:hover {
+        background: rgb(var(--v-theme-surface));
+      }
+    }
+    .apexcharts-menu-icon {
+      &:hover {
+        svg {
+          fill: rgb(var(--v-theme-lightText));
+        }
+      }
+    }
+  }
+
+  .apexcharts-xaxistooltip,
+  .apexcharts-yaxistooltip {
+    background: rgb(var(--v-theme-containerBg));
+    border: 1px solid rgb(var(--v-theme-borderlight));
+    color: rgb(var(--v-theme-darkText));
+  }
+
+  .apexcharts-xaxistooltip-bottom {
+    &::before,
+    &::after {
+      border-bottom-color: rgb(var(--v-theme-containerBg));
+    }
+  }
+
+  .v-overlay__scrim {
+    background: rgb(var(--v-theme-lightText));
+    opacity: 0.1;
+  }
+
+  .vue3-easy-data-table__message {
+    --easy-table-message-font-color: rgb(var(--v-theme-lightText));
+  }
+
+  .vue3-easy-data-table__footer {
+    .previous-page__click-button,
+    .next-page__click-button {
+      .arrow {
+        border-top: 2px solid rgb(var(--v-theme-lightText));
+        border-left: 2px solid rgb(var(--v-theme-lightText));
+      }
+    }
+    .previous-page__click-button.first-page,
+    .next-page__click-button.last-page {
+      .arrow {
+        opacity: 0.3;
+      }
+    }
+  }
+
+  .borderLeft {
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .planLabel,
+  .PlanIcon {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .planButton {
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .bb {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+}

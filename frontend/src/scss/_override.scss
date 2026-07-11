@@ -1,0 +1,136 @@
+html {
+  .bg-success {
+    color: white !important;
+  }
+}
+
+.v-row + .v-row {
+  margin-top: 0px;
+}
+
+.v-divider {
+  opacity: 1;
+  border-color: rgba(var(--v-theme-borderLight), 0.36);
+}
+
+.list-content {
+  .v-list-item {
+    .v-list-item__content {
+      min-width: unset;
+    }
+  }
+}
+
+.v-table > .v-table__wrapper > table > thead > tr > th {
+  color: inherit;
+}
+
+.border-blue-right {
+  border-right: 1px solid rgba(var(--v-theme-borderLight), 0.36);
+  [dir='rtl'] & {
+    border-right: unset;
+    border-left: 1px solid rgba(var(--v-theme-borderLight), 0.36);
+  }
+}
+
+.v-selection-control {
+  flex: unset;
+}
+
+.no-spacer {
+  .v-list-item__spacer {
+    display: none !important;
+  }
+}
+
+@keyframes progress-circular-rotate {
+  100% {
+    transform: rotate(270deg);
+  }
+}
+
+.v-toolbar.breadcrumb {
+  .v-toolbar__content {
+    flex-wrap: wrap;
+    height: unset !important;
+  }
+}
+
+// apexchart css
+.apexcharts-canvas {
+  .apexcharts-tooltip-rangebar {
+    padding: 0px 8px 5px;
+  }
+  .apexcharts-tooltip-title {
+    margin-bottom: 0;
+  }
+  .apexcharts-tooltip-marker {
+    margin-top: -9px;
+  }
+  .apexcharts-tooltip-series-group {
+    &.apexcharts-active,
+    &:last-child {
+      padding-bottom: 0;
+    }
+  }
+  .apexcharts-menu {
+    .apexcharts-menu-item {
+      &:hover {
+        background: rgb(var(--v-theme-gray100));
+      }
+    }
+  }
+}
+.vue-apexcharts {
+  [dir='rtl'] & {
+    direction: ltr;
+  }
+}
+
+// timeline css
+.alrenating-timeline.v-timeline--vertical {
+  &.v-timeline {
+    .v-timeline-item {
+      &:nth-child(2n) {
+        .v-timeline-item__body {
+          text-align: right;
+          [dir='rtl'] & {
+            text-align: left;
+          }
+        }
+      }
+    }
+  }
+}
+
+.auth-2 {
+  background: rgb(var(--v-theme-surface));
+}
+
+// snackbar css
+.v-snackbar__wrapper {
+  &.v-snackbar--variant-tonal {
+    background: rgb(var(--v-theme-surface));
+  }
+}
+.v-snackbar--variant-outlined {
+  background-color: rgb(var(--v-theme-surface));
+}
+
+// pie charts
+.v-overlay > .v-pie__tooltip-content {
+  background: rgba(var(--v-theme-containerBg), 1) !important;
+  color: rgba(var(--v-theme-lightText), 1) !important;
+}
+
+.v-pie__legend {
+  .v-chip-group {
+    .v-slide-group__content {
+      .v-chip {
+        .v-chip__overlay {
+          background-color: var(--v-theme-containerBg);
+        }
+      }
+    }
+  }
+}

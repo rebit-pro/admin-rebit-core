@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["env.d.ts", "playwright.config.ts", "e2e/**/*.ts"],
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "types": ["node"]
+  }
+}

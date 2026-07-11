@@ -1,0 +1,7 @@
+.git
+vendor
+.env
+var/cache
+var/log
+.phpunit.cache
+.psalm-cache

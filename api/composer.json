@@ -1,0 +1,47 @@
+{
+    "name": "rebit/rebit-admin-core",
+    "description": "Universal admin panel backend scaffold for ReBit Studio.",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.5",
+        "monolog/monolog": "^3.0",
+        "php-di/php-di": "^7.0",
+        "slim/psr7": "^1.7",
+        "slim/slim": "^4.14",
+        "symfony/console": "^7.1",
+        "symfony/uid": "^7.1",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.68",
+        "phpunit/phpunit": "^12.0",
+        "vimeo/psalm": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "App\\Test\\": "tests/"
+        }
+    },
+    "scripts": {
+        "check": [
+            "@lint",
+            "@test"
+        ],
+        "lint": "php -l public/index.php && find src config tests -name '*.php' -print0 | xargs -0 -n1 php -l",
+        "migrate": "php bin/app.php migrate",
+        "fixtures": "php bin/app.php fixtures",
+        "test": "phpunit"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
+        },
+        "sort-packages": true
+    }
+}

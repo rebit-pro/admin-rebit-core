@@ -1,0 +1,13 @@
+{
+  "Dashboard": "Дашборд",
+  "OrderBook": "P2P Стакан",
+  "Balances": "Балансы",
+  "Transactions": "Транзакции",
+  "Profile": "Профиль",
+  "ApiConnection": "Подключение Bybit",
+  "Login": "Вход",
+  "Register": "Регистрация",
+  "Home": "Главная",
+  "Wallet": "Кошелёк",
+  "Settings": "Настройки"
+}

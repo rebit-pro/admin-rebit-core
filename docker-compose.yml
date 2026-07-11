@@ -1,0 +1,60 @@
+services:
+  nginx:
+    image: nginx:1.29-alpine
+    depends_on:
+      - app
+    ports:
+      - "8085:80"
+    volumes:
+      - ./api:/app:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+  app:
+    build:
+      context: ./docker
+      dockerfile: php/Dockerfile
+    working_dir: /app
+    env_file:
+      - ./api/.env
+    volumes:
+      - ./api:/app
+    depends_on:
+      - db
+
+  frontend-node:
+    image: node:24-alpine
+    working_dir: /app
+    env_file:
+      - ./frontend/.env
+    environment:
+      NODE_ENV: development
+      API_PROXY_TARGET: http://nginx
+      HOST: 0.0.0.0
+    command: sh -lc "npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    ports:
+      - "5174:5173"
+    depends_on:
+      - nginx
+
+  db:
+    image: postgres:17-alpine
+    ports:
+      - "54325:5432"
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-rebit_admin}
+      POSTGRES_USER: ${DB_USERNAME:-rebit}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-rebit}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-rebit} -d ${DB_DATABASE:-rebit_admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:
+  frontend-node-modules:
