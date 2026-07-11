@@ -119,3 +119,31 @@ MVP-1 = тонкий вертикальный срез до прода: `Auth` +
 1) multi-stage prod-Dockerfile'ы (API + Berry build→nginx), `docker-compose-production.yml` (Traefik: `admin.rebit-pro.ru` + `api2.rebit-pro.ru`, CORS-whitelist, миграции-gate, versioned secrets);
 2) **GitHub Actions** `.github/workflows/makefile.yml` (образец P2P) + `deploy/swarm-publish-runtime.sh`, registry **ghcr.io/rebit-pro**;
 3) бэкап + базовые алерты; uuid-перекладка `auth_users` перед первым деплоем.
+
+---
+
+## 2026-07-11 Консилиум по 04-devops.md перед задачей #13 (прод-деплой через GitHub Actions)
+
+**Проведён консилиум** (4 эксперта → синтезатор → скептик, вето нет): решение — **not_ready**, план требует ревизии до начала работ. Полный отчёт: [`plans/prod-deploy/consilium-2026-07-11.md`](plans/prod-deploy/consilium-2026-07-11.md).
+
+Ключевое:
+- **Brownfield, не greenfield:** на 37.143.8.221 уже живёт прод P2P (`app.rebit-pro.ru` → 200, `api.rebit-pro.ru` → 401) за общим Traefik **v2.11** (план пинит 3.x) + deploy-юзер третьего проекта. §13 шаги 4–5 (site.yml, деплой шлюза) по живому хосту гонять нельзя — риск уронить соседний прод. Только `deploy.labels` своего стека.
+- **Внутренние противоречия плана:** ветка `main` (факт: `master`); `context: api` (§6) vs `docker/` в корне (§1a); два префикса имён образов; три имени стека; две механики деплоя в §7; три версии VITE-контракта; §15-gate миграций vs one-shot в стеке.
+- **SSH-канал не подтверждён:** из среды аудита баннер с 37.143.8.221 не приходит; доступность с GitHub-раннеров неизвестна → канарейка до написания deploy-джобы (развилка hosted/self-hosted runner).
+- **План устарел местами:** symfony/console уже внедрён (bin/app.php), pdo_pgsql в dev-образе есть; фронтового prod-Dockerfile в репо нет (то, что принимали за факт, — эталон P2P).
+- **До прод-релиза:** SmartCaptcha вместо GeeTest (152-ФЗ, код грузит static.geetest.com), `*_FILE`-чтение секретов в api (сейчас только `$_ENV`), бэкап-пререквизиты (S3, restore-runbook), `.dockerignore`, cs-check/psalm-скрипты.
+- DNS обоих доменов уже указывает на боевой IP; 80/443 открыты, ACME возможен.
+
+**Следующий шаг:** ревизия 04-devops.md по blocker-пакету + параллельно SSH-канарейка и инвентаризация сервера; затем repo-артефакты (см. порядок в отчёте консилиума).
+
+## 2026-07-11 Ревизия 04-devops.md по итогам консилиума (blocker-пакет внесён)
+
+План переведён из greenfield в **brownfield** и очищен от внутренних противоречий (диф ~140/143 строк):
+- §0/§1/§4/§5: принцип brownfield, честная топология (один хост manager=db, общий Traefik v2.11 вне объёма, сосед P2P), §4 переписан на «аудит + точечный gap-fix» с перечнем угроз site.yml, §5 — «шлюз не деплоим, только labels» + факт сломанного catchall-редиректа.
+- Пакет решений зафиксирован в §14: №9 стек `admin` + префикс образов `admin-rebit-core-*`; №10 ветка `main` (переименование master → main на GitHub-side шаге); §14.3 токен-модель GITHUB_TOKEN + read-PAT; §14.5 бэкапы — Yandex Object Storage; §14.7 один хост.
+- §6 переписан: context `.`, services: postgres, security-scan-джоба в графе, build-args VITE_* + validate, SSH_KNOWN_HOSTS-пин, environment production только на deploy, latest-stable шаг; пререквизит cs-check/psalm отмечен.
+- §7: одна механика деплоя (P2P scp-releases), **migrate-gate до stack deploy** (+advisory lock, expand/contract, bootstrap первого деплоя), cron без schedule:run (отдельные сервисы, MVP: auth:purge-expired-tokens — команду написать), штатный `make rollback`.
+- §8: полный инвентарь секретов, /srv от deploy 0700/0600, «*_FILE — пункт работ, не факт»; §9: /health → readiness, ротация логов через compose logging; §10: конкретика бэкапов + restore-runbook до релиза; §11: харднинг-роли = отдельная разработка с обкаткой на VM, гигиена ключей.
+- §13 пересобран: шаг 0 — блокер-пакет (SSH-канарейка с GH-раннера, инвентаризация сервера, tenancy-решение заказчика), выполненное отмечено; §16: капча «решено, но НЕ сделано» (код на GeeTest — предусловие релиза), Sentry SaaS-без-ПДн, tenancy — ОТКРЫТО.
+
+**Следующий шаг:** шаг 0 из §13 — SSH-канарейка + инвентаризация 37.143.8.221 (нужна среда с рабочим SSH — из текущей баннер не приходит) + письменное tenancy-решение заказчика. Параллельно можно начинать шаги 1–3 (prod-Dockerfile'ы, приложение к проду, dev-набор/Makefile).
