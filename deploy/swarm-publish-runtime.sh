@@ -15,7 +15,7 @@ Environment overrides:
   BACKEND_ENV_FILE=/srv/admin-rebit-core/swarm/backend.env
   SECRETS_DIR=/srv/admin-rebit-core/swarm/secrets
   REQUIRED_SECRET_NAMES="admin_db_password admin_smartcaptcha_server_key"
-  OPTIONAL_SECRET_NAMES="admin_backup_aws_secret_access_key admin_smtp_password admin_sentry_dsn"
+  OPTIONAL_SECRET_NAMES="admin_smtp_password admin_sentry_dsn admin_backup_aws_secret_access_key"
   OUTPUT_ENV_FILE=/tmp/admin-swarm-runtime.env
 
 Optional explicit object names:
@@ -230,7 +230,7 @@ BASE_DIR="${BASE_DIR:-/srv/admin-rebit-core/swarm}"
 BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-$BASE_DIR/backend.env}"
 SECRETS_DIR="${SECRETS_DIR:-$BASE_DIR/secrets}"
 REQUIRED_SECRET_NAMES="${REQUIRED_SECRET_NAMES:-admin_db_password admin_smartcaptcha_server_key}"
-OPTIONAL_SECRET_NAMES="${OPTIONAL_SECRET_NAMES:-admin_backup_aws_secret_access_key admin_smtp_password admin_sentry_dsn}"
+OPTIONAL_SECRET_NAMES="${OPTIONAL_SECRET_NAMES:-admin_smtp_password admin_sentry_dsn admin_backup_aws_secret_access_key}"
 OUTPUT_ENV_FILE="${OUTPUT_ENV_FILE:-}"
 
 BACKEND_ENV_CONFIG_NAME="${BACKEND_ENV_CONFIG_NAME:-admin_backend_env_$VERSION}"

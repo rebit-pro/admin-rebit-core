@@ -176,16 +176,8 @@ jobs:
           cache-to: type=gha,scope=api-php-cli,mode=max
           provenance: false
 
-      - name: Build and push api-postgres-backup
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/production/postgres-backup/Dockerfile
-          push: true
-          tags: ${{ secrets.REGISTRY }}/admin-rebit-core-api-postgres-backup:${{ env.IMAGE_TAG }}
-          cache-from: type=gha,scope=api-postgres-backup
-          cache-to: type=gha,scope=api-postgres-backup,mode=max
-          provenance: false
+      # Образ api-postgres-backup НЕ собираем: бэкапы отложены решением заказчика
+      # 2026-07-12 (docs/04-devops.md §10); Dockerfile остаётся в docker/production/.
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -246,7 +238,7 @@ jobs:
       - name: Trivy scan images (fail on HIGH/CRITICAL)
         run: |
           curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.58.1
-          for image in api api-php-fpm api-php-cli api-postgres-backup frontend; do
+          for image in api api-php-fpm api-php-cli frontend; do
             echo "== trivy: $image"
             trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed \
               "${{ secrets.REGISTRY }}/admin-rebit-core-$image:${{ env.IMAGE_TAG }}"
@@ -295,8 +287,6 @@ jobs:
           REGISTRY: ${{ secrets.REGISTRY }}
           GHCR_PULL_USER: ${{ secrets.GHCR_PULL_USER }}
           GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
-          BACKUP_AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_AWS_ACCESS_KEY_ID }}
-          BACKUP_S3_BUCKET: ${{ vars.BACKUP_S3_BUCKET }}
         run: make deploy
 
       - name: Smoke
@@ -311,7 +301,7 @@ jobs:
       - name: Tag latest-stable
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          for image in api api-php-fpm api-php-cli api-postgres-backup frontend; do
+          for image in api api-php-fpm api-php-cli frontend; do
             docker buildx imagetools create \
               -t "${{ secrets.REGISTRY }}/admin-rebit-core-$image:latest-stable" \
               "${{ secrets.REGISTRY }}/admin-rebit-core-$image:${{ env.IMAGE_TAG }}"

@@ -12,9 +12,14 @@ vi /srv/admin-rebit-core/swarm/backend.env
 # секреты — по одному файлу на секрет, строго 0600 (publish-скрипт падает иначе)
 vi /srv/admin-rebit-core/swarm/secrets/admin_db_password
 vi /srv/admin-rebit-core/swarm/secrets/admin_smartcaptcha_server_key
-vi /srv/admin-rebit-core/swarm/secrets/admin_backup_aws_secret_access_key
 chmod 0600 /srv/admin-rebit-core/swarm/secrets/*
+# admin_backup_aws_secret_access_key — при вводе бэкапов (отложены решением заказчика 2026-07-12)
 ```
+
+## Разовый пререквизит кластера: swarm-cronjob
+
+На живом swarm его нет (инвентаризация 2026-07-12), а cron-задачи стека (purge-tokens)
+исполняет именно он — развернуть до первого деплоя: см. шапку `deploy/swarm-cronjob-stack.yml`.
 
 ## Каждый релиз
 

@@ -101,14 +101,12 @@ push:
 	docker push $(IMAGE_PREFIX)-api:$(IMAGE_TAG)
 	docker push $(IMAGE_PREFIX)-api-php-fpm:$(IMAGE_TAG)
 	docker push $(IMAGE_PREFIX)-api-php-cli:$(IMAGE_TAG)
-	docker push $(IMAGE_PREFIX)-api-postgres-backup:$(IMAGE_TAG)
 	docker push $(IMAGE_PREFIX)-frontend:$(IMAGE_TAG)
 
 ## --- Прод-деплой (релизная механика P2P + migrate-gate, docs/04-devops.md §7) ---
 # Требуемые переменные: HOST, BUILD_NUMBER, IMAGE_TAG (+ GHCR_PULL_TOKEN/GHCR_PULL_USER для docker login).
 # Versioned-имена Swarm-объектов приходят из окружения (их печатает deploy/swarm-publish-runtime.sh):
-#   BACKEND_ENV_CONFIG_NAME, ADMIN_DB_PASSWORD_SECRET_NAME,
-#   ADMIN_SMARTCAPTCHA_SERVER_KEY_SECRET_NAME, ADMIN_BACKUP_AWS_SECRET_ACCESS_KEY_SECRET_NAME
+#   BACKEND_ENV_CONFIG_NAME, ADMIN_DB_PASSWORD_SECRET_NAME, ADMIN_SMARTCAPTCHA_SERVER_KEY_SECRET_NAME
 # Bootstrap первого деплоя: make deploy SKIP_MIGRATE=1 && make api-migrate-prod (deploy/README.md).
 deploy-check-env:
 	@test -n "$(HOST)" || { echo "Set HOST"; exit 1; }
@@ -132,25 +130,19 @@ deploy: deploy-check-env
 		&& rm -rf $(RELEASE_DIR) && mkdir $(RELEASE_DIR) \
 		&& mv ~/docker-compose-production.yml $(RELEASE_DIR)/$(COMPOSE_DST) \
 		&& cd $(RELEASE_DIR) \
-		&& printf "REGISTRY=%s\nIMAGE_TAG=%s\nDB_DATABASE=%s\nDB_USERNAME=%s\nBACKUP_AWS_ACCESS_KEY_ID=%s\nBACKUP_AWS_DEFAULT_REGION=%s\nBACKUP_S3_ENDPOINT=%s\nBACKUP_S3_BUCKET=%s\nBACKEND_ENV_CONFIG_NAME=%s\nADMIN_DB_PASSWORD_SECRET_NAME=%s\nADMIN_SMARTCAPTCHA_SERVER_KEY_SECRET_NAME=%s\nADMIN_BACKUP_AWS_SECRET_ACCESS_KEY_SECRET_NAME=%s\n" \
+		&& printf "REGISTRY=%s\nIMAGE_TAG=%s\nDB_DATABASE=%s\nDB_USERNAME=%s\nBACKEND_ENV_CONFIG_NAME=%s\nADMIN_DB_PASSWORD_SECRET_NAME=%s\nADMIN_SMARTCAPTCHA_SERVER_KEY_SECRET_NAME=%s\n" \
 			"$(REGISTRY)" \
 			"$(IMAGE_TAG)" \
 			"$(DB_DATABASE)" \
 			"$(DB_USERNAME)" \
-			"$(BACKUP_AWS_ACCESS_KEY_ID)" \
-			"$(BACKUP_AWS_DEFAULT_REGION)" \
-			"$(BACKUP_S3_ENDPOINT)" \
-			"$(BACKUP_S3_BUCKET)" \
 			"$(BACKEND_ENV_CONFIG_NAME)" \
 			"$(ADMIN_DB_PASSWORD_SECRET_NAME)" \
-			"$(ADMIN_SMARTCAPTCHA_SERVER_KEY_SECRET_NAME)" \
-			"$(ADMIN_BACKUP_AWS_SECRET_ACCESS_KEY_SECRET_NAME)" > .env \
+			"$(ADMIN_SMARTCAPTCHA_SERVER_KEY_SECRET_NAME)" > .env \
 		&& if [ -n "$(GHCR_PULL_TOKEN)" ]; then echo "$(GHCR_PULL_TOKEN)" | docker login ghcr.io -u "$(GHCR_PULL_USER)" --password-stdin; fi \
 		&& docker pull $(REGISTRY)/admin-rebit-core-frontend:$(IMAGE_TAG) \
 		&& docker pull $(REGISTRY)/admin-rebit-core-api:$(IMAGE_TAG) \
 		&& docker pull $(REGISTRY)/admin-rebit-core-api-php-fpm:$(IMAGE_TAG) \
-		&& docker pull $(REGISTRY)/admin-rebit-core-api-php-cli:$(IMAGE_TAG) \
-		&& docker pull $(REGISTRY)/admin-rebit-core-api-postgres-backup:$(IMAGE_TAG)'
+		&& docker pull $(REGISTRY)/admin-rebit-core-api-php-cli:$(IMAGE_TAG)'
 	@if [ -z "$(SKIP_MIGRATE)" ]; then $(MAKE) api-migrate-prod; else echo "[deploy] SKIP_MIGRATE=1 — migrate-gate пропущен (bootstrap)"; fi
 	$(SSH) ' \
 		ln -sfn $(RELEASE_DIR) $(LINK_DIR) \

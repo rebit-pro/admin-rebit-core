@@ -187,3 +187,27 @@ MVP-1 = тонкий вертикальный срез до прода: `Auth` +
 **Verify:** YAML обоих workflow распаршен; `docker compose -f docker-compose-production.yml config` валиден; `bash -n`/`sh -n` всех скриптов чисто; `make -n deploy/rollback/api-migrate-prod` рендерятся корректно; api-lint/api-test — зелёные.
 
 **Осталось вне репо (нужны доступы):** GitHub-side (secrets: HOST/PORT/DEPLOY_USER/SSH_PRIVATE_KEY/SSH_KNOWN_HOSTS/REGISTRY/GHCR_PULL_USER+TOKEN/BACKUP_AWS_ACCESS_KEY_ID; vars: VITE_API_URL/VITE_SMARTCAPTCHA_CLIENT_KEY/BACKUP_S3_BUCKET; environment production + reviewers; branch protection), CI-ключ в authorized_keys deploy → прогон канарейки, инвентаризация сервера (финализация имён labels + limits), tenancy-решение, S3-бакет + lifecycle, ключи SmartCaptcha, первый прогон CI (соберёт php-образы — задача #4), bootstrap-деплой + учения rollback/restore.
+
+## 2026-07-12 Инвентаризация сервера выполнена; бэкапы отложены; SSH-ключи CI готовы
+
+**SSH заработал** (`ssh rebit-pro`, root; ранее баннер не приходил — причина не установлена, канал с GitHub-раннера подтвердит канарейка). Проведена **инвентаризация §4 шаг 0** (итоги — §16.7 плана):
+- Узел один: `p903785.kvmvps`, manager, label `db=db` есть; **1 CPU / 2 ГБ RAM** (available ~938 МБ), диск 59 ГБ (36 свободно), docker engine 29.1.1.
+- Стеки-соседи: `site` (P2P, 13 сервисов, 2/2 реплики), `solcoing` (mariadb+web), `traefik` (v2.11). Сеть `traefik-public` существует.
+- **Labels подтверждены дословно**: entryPoints `http`/`https`, certResolver `letsEncrypt`, middlewares `secure-headers` + `redirect-to-https` (определены на самом traefik-сервисе, доступны из чужих стеков — P2P так и живёт); catchall-редирект сломан (HostRegexp v2) — наши парные http-роутеры обязательны. Правок в labels не потребовалось.
+- **swarm-cronjob отсутствует** → добавлен `deploy/swarm-cronjob-stack.yml` (разовый разворот до первого деплоя, лимит 32М).
+- `daemon.json` — только registry-mirror timeweb (ротация логов у нас через `logging:` в compose — верно).
+- В `authorized_keys` `deploy` — единственный чужой ключ `tarasov.ae@nikamed-it.ru` (гигиена §11; наш CI-ключ дописывать, не заменять).
+
+**По ёмкости пересобран прод-стек**: replicas 2→**1** у frontend/api/api-php-fpm, CPU-reservations убраны, memory-reservations минимальны (16/16/64/128М), limits ужаты (суммарно ~576М) — прежние reservations (1.15 CPU) физически не заскедулились бы на 1 CPU.
+
+**Бэкапы отложены решением заказчика** (§10, §16.6): сервис убран из compose, сборка образа — из CI, `BACKUP_*` — из Makefile/workflow/secrets; Dockerfile и publish-опция остаются на будущее. Риск зафиксирован: до ввода RPO не гарантирован (отказ диска = потеря данных админки).
+
+**Ключи CI сгенерированы**: `~/.ssh/admin-rebit-core-ci{,.pub}` (ed25519) и пин `~/.ssh/admin-rebit-core-known_hosts` (ed25519 SHA256:bwtF…9wqU) — значения для GitHub Secrets готовы, чек-лист обновлён.
+
+**Verify:** workflow YAML ok, prod-compose `config` валиден (с новыми replicas/resources, без backup-сервиса), publish.sh `bash -n` ok, `make -n deploy` без BACKUP-ссылок.
+
+**Следующее:** внести Secrets/Variables в GitHub + дописать CI-ключ на сервер (C1) → push ветки, PR, канарейка → капча + закладка секретов + swarm-cronjob-стек → merge и полный прогон.
+
+## 2026-07-12 CI-ключ установлен на сервер (C1 закрыт)
+
+Секреты/vars внесены в GitHub пользователем. CI-ключ дописан в `/home/deploy/.ssh/authorized_keys` (строка `restrict <ed25519> ci@admin-rebit-core`; существующий ключ tarasov не тронут; права 700/600, владелец deploy). Проверено по самому CI-ключу: вход `deploy@37.143.8.221` ок, `docker info` доступен (deploy в группе `docker`, swarm=active/manager), **scp под `restrict` работает** (важно для `make deploy`). Осталось из блокеров: канарейка с GitHub-раннера (workflow_dispatch после push ветки), капча + закладка секретов на сервер + разворот swarm-cronjob-стека, tenancy-решение.
