@@ -1,0 +1,318 @@
+# CI/CD (docs/04-devops.md §6): checks → build/push (ghcr) → security-scan → deploy (Swarm).
+# Ветка деплоя — master (§14.10). Образец — Rabbit P2P, усиления: e2e включены, Trivy,
+# gitleaks, composer/npm audit, migrate-gate в make deploy, latest-stable после smoke.
+name: CI/CD
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+  BUILD_NUMBER: ${{ github.run_number }}
+
+jobs:
+  api-checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: rebit_admin
+          POSTGRES_USER: rebit
+          POSTGRES_PASSWORD: rebit
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rebit -d rebit_admin"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: intl, mbstring, curl, json, openssl, pdo_pgsql
+          tools: composer:v2
+          coverage: none
+
+      - name: Cache vendor
+        uses: actions/cache@v4
+        with:
+          path: api/vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('api/composer.lock') }}
+
+      - name: Install dependencies
+        working-directory: api
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Lint
+        working-directory: api
+        run: composer lint
+
+      - name: Code style
+        working-directory: api
+        run: composer cs-check
+
+      - name: Static analysis (psalm)
+        working-directory: api
+        run: composer psalm
+
+      - name: Tests (PHPUnit, Postgres)
+        working-directory: api
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '5432'
+          DB_DATABASE: rebit_admin
+          DB_USERNAME: rebit
+          DB_PASSWORD: rebit
+        run: composer test
+
+      - name: Composer audit
+        working-directory: api
+        run: composer audit
+
+      - name: Gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz \
+            | tar -xz gitleaks
+          ./gitleaks detect --source . --no-banner --redact
+
+  frontend-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Typecheck e2e
+        working-directory: frontend
+        run: npm run typecheck:e2e
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npm run test:e2e:install
+
+      # Мок-e2e гейтят деплой (в эталоне P2P e2e под if:false — здесь включены, §6).
+      - name: E2E (mock API)
+        working-directory: frontend
+        run: npm run test:e2e:run
+
+      - name: NPM audit
+        working-directory: frontend
+        run: npm audit --audit-level=critical
+
+  build-api:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [api-checks]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to ghcr (GITHUB_TOKEN)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push api (nginx)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/production/nginx/Dockerfile
+          push: true
+          tags: ${{ secrets.REGISTRY }}/admin-rebit-core-api:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=api-nginx
+          cache-to: type=gha,scope=api-nginx,mode=max
+          provenance: false
+
+      - name: Build and push api-php-fpm
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/production/php-fpm/Dockerfile
+          push: true
+          tags: ${{ secrets.REGISTRY }}/admin-rebit-core-api-php-fpm:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=api-php-fpm
+          cache-to: type=gha,scope=api-php-fpm,mode=max
+          provenance: false
+
+      - name: Build and push api-php-cli
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/production/php-cli/Dockerfile
+          push: true
+          tags: ${{ secrets.REGISTRY }}/admin-rebit-core-api-php-cli:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=api-php-cli
+          cache-to: type=gha,scope=api-php-cli,mode=max
+          provenance: false
+
+      - name: Build and push api-postgres-backup
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/production/postgres-backup/Dockerfile
+          push: true
+          tags: ${{ secrets.REGISTRY }}/admin-rebit-core-api-postgres-backup:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=api-postgres-backup
+          cache-to: type=gha,scope=api-postgres-backup,mode=max
+          provenance: false
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [frontend-checks]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      # Пустой VITE_API_URL = зелёная сборка и мёртвый прод-фронт: валидируем до сборки (§2.4).
+      - name: Validate VITE build-args
+        run: |
+          test -n "${{ vars.VITE_API_URL }}" || { echo "vars.VITE_API_URL is empty"; exit 1; }
+          test -n "${{ vars.VITE_SMARTCAPTCHA_CLIENT_KEY }}" || { echo "vars.VITE_SMARTCAPTCHA_CLIENT_KEY is empty"; exit 1; }
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to ghcr (GITHUB_TOKEN)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/docker/production/nginx/Dockerfile
+          push: true
+          tags: ${{ secrets.REGISTRY }}/admin-rebit-core-frontend:${{ env.IMAGE_TAG }}
+          build-args: |
+            VITE_API_URL=${{ vars.VITE_API_URL }}
+            VITE_SMARTCAPTCHA_CLIENT_KEY=${{ vars.VITE_SMARTCAPTCHA_CLIENT_KEY }}
+            VITE_APP_VERSION=${{ github.run_number }}
+            VITE_API_MOCKS_ENABLED=false
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+          provenance: false
+
+  security-scan:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [build-api, build-frontend]
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Login to ghcr (GITHUB_TOKEN)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trivy scan images (fail on HIGH/CRITICAL)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.58.1
+          for image in api api-php-fpm api-php-cli api-postgres-backup frontend; do
+            echo "== trivy: $image"
+            trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed \
+              "${{ secrets.REGISTRY }}/admin-rebit-core-$image:${{ env.IMAGE_TAG }}"
+          done
+
+      - name: Assert no .env/var in images and APP_DEBUG off
+        run: |
+          docker pull -q "${{ secrets.REGISTRY }}/admin-rebit-core-api-php-fpm:${{ env.IMAGE_TAG }}"
+          docker run --rm "${{ secrets.REGISTRY }}/admin-rebit-core-api-php-fpm:${{ env.IMAGE_TAG }}" \
+            sh -c '! test -f /app/.env && ! test -d /app/var/log && php -r "exit(ini_get(\"expose_php\") ? 1 : 0);"'
+
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [build-api, build-frontend, security-scan]
+    environment: production
+    concurrency: production-deploy
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install SSH key and pinned known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Publish versioned Swarm config/secrets
+        run: |
+          ssh -o BatchMode=yes -p "${{ secrets.PORT }}" \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.HOST }}" \
+            "VERSION=${{ env.BUILD_NUMBER }} OUTPUT_ENV_FILE=/tmp/admin-swarm-runtime.env bash -s" \
+            < deploy/swarm-publish-runtime.sh
+          ssh -o BatchMode=yes -p "${{ secrets.PORT }}" \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.HOST }}" \
+            "cat /tmp/admin-swarm-runtime.env" >> "$GITHUB_ENV"
+
+      - name: Deploy (migrate-gate → stack deploy)
+        env:
+          HOST: ${{ secrets.HOST }}
+          PORT: ${{ secrets.PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          REGISTRY: ${{ secrets.REGISTRY }}
+          GHCR_PULL_USER: ${{ secrets.GHCR_PULL_USER }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          BACKUP_AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_AWS_ACCESS_KEY_ID }}
+          BACKUP_S3_BUCKET: ${{ vars.BACKUP_S3_BUCKET }}
+        run: make deploy
+
+      - name: Smoke
+        run: |
+          sleep 20
+          curl -sSf -o /dev/null https://admin.rebit-pro.ru/health/nginx
+          curl -sSf -o /dev/null https://api2.rebit-pro.ru/health
+          echo "redirect check:"
+          curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://admin.rebit-pro.ru | grep -E '^30[18] https://admin.rebit-pro.ru'
+
+      # Маркер последнего прошедшего smoke релиза — источник для ручного отката по образам.
+      - name: Tag latest-stable
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for image in api api-php-fpm api-php-cli api-postgres-backup frontend; do
+            docker buildx imagetools create \
+              -t "${{ secrets.REGISTRY }}/admin-rebit-core-$image:latest-stable" \
+              "${{ secrets.REGISTRY }}/admin-rebit-core-$image:${{ env.IMAGE_TAG }}"
+          done

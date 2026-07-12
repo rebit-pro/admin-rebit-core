@@ -18,3 +18,7 @@ Thumbs.db
 /frontend/node_modules/
 /frontend/dist/
 /frontend/.env
+
+# Deploy: боевые секреты живут ТОЛЬКО на сервере; в репо — *.example
+/deploy/secrets/*
+!/deploy/secrets/*.example

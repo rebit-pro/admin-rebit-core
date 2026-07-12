@@ -170,3 +170,20 @@ MVP-1 = тонкий вертикальный срез до прода: `Auth` +
 **Verify:** php -l ✅ · cs-check 0 ✅ · psalm 0 ✅ · PHPUnit 13/13 ✅ · vue-tsc ✅ · eslint ✅ · /health 200/503 ✅ · login+token ✅ · purge ✅ · mailpit UI 200 ✅. Отложено с пометкой: traefik-dev и s3mock/backup в dev-compose (появятся с шагами 6–8), e2e-прогон (браузеры Playwright не ставились).
 
 **Следующий шаг:** §13.4 GitHub-side setup (переименование ветки в main, protection, environment, secrets) и §13.0 (SSH-канарейка, инвентаризация сервера, tenancy) — требуют действий на GitHub/сервере.
+
+## 2026-07-11 Шаги 7–9 (репозиторная часть): прод-стек, деплой-контур, CI/CD
+
+**Шаг 7 — `docker-compose-production.yml` (стек `admin`) + `deploy/` + Makefile:**
+- Стек: frontend/api/api-php-fpm (replicas 2, `start-first` + `failure_action: rollback`, healthchecks: wget /health/nginx, wget /health через цепочку nginx→fpm→БД, cgi-fcgi /ping), api-postgres (manager=db, dnsrr, `POSTGRES_PASSWORD_FILE`), cron-сервисы `api-purge-tokens` и `api-postgres-backup` (replicas 0, swarm-cronjob `0 * * * *`); logging json-file 10m×3 через якорь; limits+reservations (стартовые, до обмера); no published ports; configs/secrets — external versioned через `${*_NAME}`.
+- Labels: https-роутеры admin/api2 + **парные http-роутеры с `redirect-to-https`** (мидлвар живого шлюза валиден, сломан только его catchall); имена certResolver/entryPoints — предварительные, TODO-инвентаризация.
+- `deploy/swarm-publish-runtime.sh` — форк P2P под `deploy`: свои дефолты (`/srv/admin-rebit-core/swarm`, секреты admin_*), **fail при group/other-readable** секрет-файле; `deploy/backend.env.example`, `deploy/secrets/*.example`, `deploy/README.md` (закладка, релиз, bootstrap, откат); `.gitignore` — боевые секреты в `deploy/secrets/` неигнорируемы только как `*.example`.
+- Makefile: `deploy` = scp в релиз `/srv/admin-rebit-core/site_N` → `.env` (versioned-имена) → login/pull → **`api-migrate-prod` (gate: `docker run --rm --network admin_default … migrate`, bind backend.env+секрет)** → symlink → `stack deploy`; `SKIP_MIGRATE=1` для bootstrap; `rollback` по релизу N; `deploy-clean` (KEEP_RELEASES=2 + image prune с warn-tolerance).
+- Образ `api-postgres-backup` (перенос из slim): alpine + postgresql17-client + aws-cli, entrypoint `*_FILE→ENV`, `pg_dump | gzip -9 → aws s3 cp` (YOS), non-root, wait-for.
+
+**Шаг 9 — `.github/workflows/`:**
+- `makefile.yml` (CI/CD, **триггеры на master**): `api-checks` (setup-php 8.5, `services: postgres:17`, lint→cs-check→psalm→test→composer audit→gitleaks-бинарь), `frontend-checks` (lint, typecheck×2, **мок-e2e Playwright включены** — гейтят деплой, npm audit critical), `build-api` (4 образа, context `.`, **GITHUB_TOKEN + packages:write**, per-image gha-cache, provenance:false), `build-frontend` (validate непустых `vars.VITE_*` → build-args), `security-scan` (Trivy HIGH/CRITICAL по всем 5 образам + assert «нет /app/.env, expose_php=Off»), `deploy` (environment production, concurrency, пиненый `SSH_KNOWN_HOSTS`, публикация versioned-объектов по ssh + имена в `$GITHUB_ENV`, `make deploy`, smoke admin/api2 + проверка http→https, **тег `latest-stable`** через imagetools после smoke).
+- `ssh-canary.yml` (workflow_dispatch) — проба SSH с hosted-раннера + состояние Swarm (шаг 0 §13).
+
+**Verify:** YAML обоих workflow распаршен; `docker compose -f docker-compose-production.yml config` валиден; `bash -n`/`sh -n` всех скриптов чисто; `make -n deploy/rollback/api-migrate-prod` рендерятся корректно; api-lint/api-test — зелёные.
+
+**Осталось вне репо (нужны доступы):** GitHub-side (secrets: HOST/PORT/DEPLOY_USER/SSH_PRIVATE_KEY/SSH_KNOWN_HOSTS/REGISTRY/GHCR_PULL_USER+TOKEN/BACKUP_AWS_ACCESS_KEY_ID; vars: VITE_API_URL/VITE_SMARTCAPTCHA_CLIENT_KEY/BACKUP_S3_BUCKET; environment production + reviewers; branch protection), CI-ключ в authorized_keys deploy → прогон канарейки, инвентаризация сервера (финализация имён labels + limits), tenancy-решение, S3-бакет + lifecycle, ключи SmartCaptcha, первый прогон CI (соберёт php-образы — задача #4), bootstrap-деплой + учения rollback/restore.
