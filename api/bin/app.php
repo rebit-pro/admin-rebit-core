@@ -3,6 +3,7 @@
 
 declare(strict_types=1);
 
+use App\Auth\Console\Command\PurgeExpiredTokensCommand;
 use App\Shared\Console\Command\LoadFixturesCommand;
 use App\Shared\Console\Command\MigrateCommand;
 use DI\Container;
@@ -21,4 +22,5 @@ if (!$container instanceof Container) {
 $application = new Application('ReBit Admin Core');
 $application->add($container->get(MigrateCommand::class));
 $application->add($container->get(LoadFixturesCommand::class));
+$application->add($container->get(PurgeExpiredTokensCommand::class));
 $application->run();

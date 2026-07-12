@@ -3,38 +3,37 @@
 import 'vue-router';
 
 declare global {
-  interface GeeTestCaptchaValidateResult {
-    lot_number: string;
-    captcha_output: string;
-    pass_token: string;
-    gen_time: string;
+  type SmartCaptchaSubscribeEvent = 'challenge-visible' | 'challenge-hidden' | 'network-error' | 'success' | 'token-expired';
+
+  interface SmartCaptchaRenderParams {
+    sitekey: string;
+    invisible?: boolean;
+    hl?: string;
+    test?: boolean;
+    hideShield?: boolean;
+    shieldPosition?: 'top-left' | 'center-left' | 'bottom-left' | 'top-right' | 'center-right' | 'bottom-right';
+    callback?: (token: string) => void;
   }
 
-  interface GeeTestCaptchaInstance {
-    showCaptcha(): void;
-    getValidate(): GeeTestCaptchaValidateResult | false;
-    onReady(callback: () => void): GeeTestCaptchaInstance;
-    onSuccess(callback: () => void): GeeTestCaptchaInstance;
-    onError(callback: (error: unknown) => void): GeeTestCaptchaInstance;
-    onClose?(callback: () => void): GeeTestCaptchaInstance;
-    destroy?(): void;
-  }
-
-  interface GeeTestInitConfig {
-    captchaId: string;
-    product?: 'bind' | 'popup' | 'float';
-    language?: string;
+  interface SmartCaptcha {
+    render(container: HTMLElement | string, params: SmartCaptchaRenderParams): number;
+    execute(widgetId?: number): void;
+    reset(widgetId?: number): void;
+    destroy(widgetId?: number): void;
+    getResponse(widgetId?: number): string;
+    subscribe(widgetId: number, event: SmartCaptchaSubscribeEvent, callback: () => void): () => void;
   }
 
   interface ImportMetaEnv {
     readonly VITE_API_URL: string;
     readonly VITE_APP_VERSION?: string;
-    readonly VITE_GEETEST_CAPTCHA_ID?: string;
+    readonly VITE_SMARTCAPTCHA_CLIENT_KEY?: string;
     readonly VITE_API_MOCKS_ENABLED?: string;
   }
 
   interface Window {
-    initGeetest4?: (config: GeeTestInitConfig, callback: (captcha: GeeTestCaptchaInstance) => void) => void;
+    smartCaptcha?: SmartCaptcha;
+    __onSmartCaptchaLoad?: () => void;
   }
 }
 

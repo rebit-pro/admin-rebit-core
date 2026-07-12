@@ -29,6 +29,7 @@ final readonly class AuditSubscriber implements EventSubscriber
         private ActorContext $actor,
     ) {}
 
+    #[\Override]
     public function subscribedTo(): array
     {
         return [
@@ -42,11 +43,13 @@ final readonly class AuditSubscriber implements EventSubscriber
         ];
     }
 
+    #[\Override]
     public function phase(): SubscriberPhase
     {
         return SubscriberPhase::InTransaction;
     }
 
+    #[\Override]
     public function handle(DomainEvent $event): void
     {
         $actorId = $this->actor->actorId();

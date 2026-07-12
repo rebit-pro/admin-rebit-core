@@ -16,10 +16,42 @@ services:
     working_dir: /app
     env_file:
       - ./api/.env
+    environment:
+      # Dev-проверка контракта docker secrets (*_FILE, docs/04-devops.md §8).
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      SMARTCAPTCHA_SERVER_KEY_FILE: /run/secrets/smartcaptcha_server_key
+    secrets:
+      - db_password
+      - smartcaptcha_server_key
     volumes:
       - ./api:/app
     depends_on:
       - db
+
+  # Ручные консольные команды: docker compose run --rm php-cli php bin/app.php <команда>
+  php-cli:
+    build:
+      context: ./docker
+      dockerfile: php/Dockerfile
+    profiles: [tools]
+    working_dir: /app
+    env_file:
+      - ./api/.env
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      SMARTCAPTCHA_SERVER_KEY_FILE: /run/secrets/smartcaptcha_server_key
+    secrets:
+      - db_password
+      - smartcaptcha_server_key
+    volumes:
+      - ./api:/app
+    depends_on:
+      - db
+
+  mailer:
+    image: axllent/mailpit
+    ports:
+      - "127.0.0.1:8025:8025"
 
   frontend-node:
     image: node:24-alpine
@@ -42,7 +74,8 @@ services:
   db:
     image: postgres:17-alpine
     ports:
-      - "54325:5432"
+      # Только loopback: docker-DNAT обходит ufw (docs/04-devops.md §3.3).
+      - "127.0.0.1:54325:5432"
     environment:
       POSTGRES_DB: ${DB_DATABASE:-rebit_admin}
       POSTGRES_USER: ${DB_USERNAME:-rebit}
@@ -58,3 +91,9 @@ services:
 volumes:
   db-data:
   frontend-node-modules:
+
+secrets:
+  db_password:
+    file: ./docker/development/secrets/db_password.txt
+  smartcaptcha_server_key:
+    file: ./docker/development/secrets/smartcaptcha_server_key.txt

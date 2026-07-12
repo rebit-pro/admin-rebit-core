@@ -147,3 +147,67 @@ MVP-1 = тонкий вертикальный срез до прода: `Auth` +
 - §13 пересобран: шаг 0 — блокер-пакет (SSH-канарейка с GH-раннера, инвентаризация сервера, tenancy-решение заказчика), выполненное отмечено; §16: капча «решено, но НЕ сделано» (код на GeeTest — предусловие релиза), Sentry SaaS-без-ПДн, tenancy — ОТКРЫТО.
 
 **Следующий шаг:** шаг 0 из §13 — SSH-канарейка + инвентаризация 37.143.8.221 (нужна среда с рабочим SSH — из текущей баннер не приходит) + письменное tenancy-решение заказчика. Параллельно можно начинать шаги 1–3 (prod-Dockerfile'ы, приложение к проду, dev-набор/Makefile).
+
+## 2026-07-11 Шаги 1–3 плана §13 (04-devops.md) выполнены
+
+**Шаг 1 — prod-Dockerfile'ы API + отказ от SQLite:**
+- `docker/production/{php-fpm,php-cli,nginx}` — двухстадийные, context `.` (корень), `COPY api/ ./`, non-root (www-data/app), opcache `validate_timestamps=0`, `expose_php=Off`, php-fpm `/ping`; php-cli — POSIX `wait-for` (в alpine нет bash); nginx — envsubst-шаблон (`PHP_FPM_HOST`, `CORS_ALLOWED_ORIGIN`), CORS-whitelist + preflight 204, security-заголовки. ✅ nginx-образ собран, `nginx -t` чист. ⚠️ php-образы собрать локально нельзя (Docker Hub и зеркало timeweb из среды недоступны) — проверка `make try-build` при первом CI-прогоне.
+- SQLite упразднён: ветка в `di/database.php`, driver-развилка в `Migrator`, `migrations/sqlite/`, sqlite-дефолт `.env.example`.
+
+**Шаг 2 — приложение к проду:**
+- `*_FILE`-чтение: `Shared/Config/EnvFileResolver` в bootstrap (приоритет `_FILE` над plain), юнит-тесты; **проверено вживую** — dev-стек переведён на `DB_PASSWORD_FILE=/run/secrets/db_password`, миграции/логин работают.
+- `/health` → readiness (ленивый `SELECT 1` через контейнер): 200 при живой БД, **503 при лежащей** (проверено остановкой db); `/health/liveness` — статический.
+- `auth:purge-expired-tokens` (+ чистка протухших regcodes) — прогнана: «Удалено: 2 токенов».
+- **SmartCaptcha вместо GeeTest**: фронт (invisible-виджет, execute на submit, reset после ошибки, типы в env.d.ts, `VITE_SMARTCAPTCHA_CLIENT_KEY` везде), бэк (`CaptchaVerifier`-порт, `SmartCaptchaVerifier` fail-closed / `NullCaptchaVerifier` при пустом ключе, IP в validate, 422), прод-Dockerfile фронта переписан (node:24, nginx:1.29, `npm ci` строго, build-args по контракту §2.4). GeeTest в коде не осталось.
+
+**Шаг 3 — dev-контур и тулинг:**
+- compose: + `php-cli` (profile tools), + `mailer` (mailpit, 127.0.0.1:8025), + file-secrets (`docker/development/secrets/*`), порт БД → loopback.
+- `.dockerignore` переписан (якорные пути: api/.env, api/var, **/vendor, node_modules, dist, docs, .github).
+- Makefile: `REGISTRY/IMAGE_TAG/STACK_NAME=admin`, `api-cs-check`, `api-analyze` (psalm), `build/build-api/build-frontend/try-build/push` (префикс `admin-rebit-core-*`); compose-сборка переименована в `docker-build`.
+- composer: `cs-check`/`cs-fix`/`psalm`, `check` расширен; `psalm.xml` (level 4). Psalm-долг разобран: 59 → 0 (авто `#[Override]` + реальные фиксы: stale-шейпы `AuthRepository` без `status`, nullable-возвраты в 3 Application-хендлерах → явный 404-throw).
+- Prettier-долг перенесённого кода (24 ошибки в UsersPage/DashboardPage/vite.config — завалил бы CI) закрыт `lint:fix`.
+
+**Verify:** php -l ✅ · cs-check 0 ✅ · psalm 0 ✅ · PHPUnit 13/13 ✅ · vue-tsc ✅ · eslint ✅ · /health 200/503 ✅ · login+token ✅ · purge ✅ · mailpit UI 200 ✅. Отложено с пометкой: traefik-dev и s3mock/backup в dev-compose (появятся с шагами 6–8), e2e-прогон (браузеры Playwright не ставились).
+
+**Следующий шаг:** §13.4 GitHub-side setup (переименование ветки в main, protection, environment, secrets) и §13.0 (SSH-канарейка, инвентаризация сервера, tenancy) — требуют действий на GitHub/сервере.
+
+## 2026-07-11 Шаги 7–9 (репозиторная часть): прод-стек, деплой-контур, CI/CD
+
+**Шаг 7 — `docker-compose-production.yml` (стек `admin`) + `deploy/` + Makefile:**
+- Стек: frontend/api/api-php-fpm (replicas 2, `start-first` + `failure_action: rollback`, healthchecks: wget /health/nginx, wget /health через цепочку nginx→fpm→БД, cgi-fcgi /ping), api-postgres (manager=db, dnsrr, `POSTGRES_PASSWORD_FILE`), cron-сервисы `api-purge-tokens` и `api-postgres-backup` (replicas 0, swarm-cronjob `0 * * * *`); logging json-file 10m×3 через якорь; limits+reservations (стартовые, до обмера); no published ports; configs/secrets — external versioned через `${*_NAME}`.
+- Labels: https-роутеры admin/api2 + **парные http-роутеры с `redirect-to-https`** (мидлвар живого шлюза валиден, сломан только его catchall); имена certResolver/entryPoints — предварительные, TODO-инвентаризация.
+- `deploy/swarm-publish-runtime.sh` — форк P2P под `deploy`: свои дефолты (`/srv/admin-rebit-core/swarm`, секреты admin_*), **fail при group/other-readable** секрет-файле; `deploy/backend.env.example`, `deploy/secrets/*.example`, `deploy/README.md` (закладка, релиз, bootstrap, откат); `.gitignore` — боевые секреты в `deploy/secrets/` неигнорируемы только как `*.example`.
+- Makefile: `deploy` = scp в релиз `/srv/admin-rebit-core/site_N` → `.env` (versioned-имена) → login/pull → **`api-migrate-prod` (gate: `docker run --rm --network admin_default … migrate`, bind backend.env+секрет)** → symlink → `stack deploy`; `SKIP_MIGRATE=1` для bootstrap; `rollback` по релизу N; `deploy-clean` (KEEP_RELEASES=2 + image prune с warn-tolerance).
+- Образ `api-postgres-backup` (перенос из slim): alpine + postgresql17-client + aws-cli, entrypoint `*_FILE→ENV`, `pg_dump | gzip -9 → aws s3 cp` (YOS), non-root, wait-for.
+
+**Шаг 9 — `.github/workflows/`:**
+- `makefile.yml` (CI/CD, **триггеры на master**): `api-checks` (setup-php 8.5, `services: postgres:17`, lint→cs-check→psalm→test→composer audit→gitleaks-бинарь), `frontend-checks` (lint, typecheck×2, **мок-e2e Playwright включены** — гейтят деплой, npm audit critical), `build-api` (4 образа, context `.`, **GITHUB_TOKEN + packages:write**, per-image gha-cache, provenance:false), `build-frontend` (validate непустых `vars.VITE_*` → build-args), `security-scan` (Trivy HIGH/CRITICAL по всем 5 образам + assert «нет /app/.env, expose_php=Off»), `deploy` (environment production, concurrency, пиненый `SSH_KNOWN_HOSTS`, публикация versioned-объектов по ssh + имена в `$GITHUB_ENV`, `make deploy`, smoke admin/api2 + проверка http→https, **тег `latest-stable`** через imagetools после smoke).
+- `ssh-canary.yml` (workflow_dispatch) — проба SSH с hosted-раннера + состояние Swarm (шаг 0 §13).
+
+**Verify:** YAML обоих workflow распаршен; `docker compose -f docker-compose-production.yml config` валиден; `bash -n`/`sh -n` всех скриптов чисто; `make -n deploy/rollback/api-migrate-prod` рендерятся корректно; api-lint/api-test — зелёные.
+
+**Осталось вне репо (нужны доступы):** GitHub-side (secrets: HOST/PORT/DEPLOY_USER/SSH_PRIVATE_KEY/SSH_KNOWN_HOSTS/REGISTRY/GHCR_PULL_USER+TOKEN/BACKUP_AWS_ACCESS_KEY_ID; vars: VITE_API_URL/VITE_SMARTCAPTCHA_CLIENT_KEY/BACKUP_S3_BUCKET; environment production + reviewers; branch protection), CI-ключ в authorized_keys deploy → прогон канарейки, инвентаризация сервера (финализация имён labels + limits), tenancy-решение, S3-бакет + lifecycle, ключи SmartCaptcha, первый прогон CI (соберёт php-образы — задача #4), bootstrap-деплой + учения rollback/restore.
+
+## 2026-07-12 Инвентаризация сервера выполнена; бэкапы отложены; SSH-ключи CI готовы
+
+**SSH заработал** (`ssh rebit-pro`, root; ранее баннер не приходил — причина не установлена, канал с GitHub-раннера подтвердит канарейка). Проведена **инвентаризация §4 шаг 0** (итоги — §16.7 плана):
+- Узел один: `p903785.kvmvps`, manager, label `db=db` есть; **1 CPU / 2 ГБ RAM** (available ~938 МБ), диск 59 ГБ (36 свободно), docker engine 29.1.1.
+- Стеки-соседи: `site` (P2P, 13 сервисов, 2/2 реплики), `solcoing` (mariadb+web), `traefik` (v2.11). Сеть `traefik-public` существует.
+- **Labels подтверждены дословно**: entryPoints `http`/`https`, certResolver `letsEncrypt`, middlewares `secure-headers` + `redirect-to-https` (определены на самом traefik-сервисе, доступны из чужих стеков — P2P так и живёт); catchall-редирект сломан (HostRegexp v2) — наши парные http-роутеры обязательны. Правок в labels не потребовалось.
+- **swarm-cronjob отсутствует** → добавлен `deploy/swarm-cronjob-stack.yml` (разовый разворот до первого деплоя, лимит 32М).
+- `daemon.json` — только registry-mirror timeweb (ротация логов у нас через `logging:` в compose — верно).
+- В `authorized_keys` `deploy` — единственный чужой ключ `tarasov.ae@nikamed-it.ru` (гигиена §11; наш CI-ключ дописывать, не заменять).
+
+**По ёмкости пересобран прод-стек**: replicas 2→**1** у frontend/api/api-php-fpm, CPU-reservations убраны, memory-reservations минимальны (16/16/64/128М), limits ужаты (суммарно ~576М) — прежние reservations (1.15 CPU) физически не заскедулились бы на 1 CPU.
+
+**Бэкапы отложены решением заказчика** (§10, §16.6): сервис убран из compose, сборка образа — из CI, `BACKUP_*` — из Makefile/workflow/secrets; Dockerfile и publish-опция остаются на будущее. Риск зафиксирован: до ввода RPO не гарантирован (отказ диска = потеря данных админки).
+
+**Ключи CI сгенерированы**: `~/.ssh/admin-rebit-core-ci{,.pub}` (ed25519) и пин `~/.ssh/admin-rebit-core-known_hosts` (ed25519 SHA256:bwtF…9wqU) — значения для GitHub Secrets готовы, чек-лист обновлён.
+
+**Verify:** workflow YAML ok, prod-compose `config` валиден (с новыми replicas/resources, без backup-сервиса), publish.sh `bash -n` ok, `make -n deploy` без BACKUP-ссылок.
+
+**Следующее:** внести Secrets/Variables в GitHub + дописать CI-ключ на сервер (C1) → push ветки, PR, канарейка → капча + закладка секретов + swarm-cronjob-стек → merge и полный прогон.
+
+## 2026-07-12 CI-ключ установлен на сервер (C1 закрыт)
+
+Секреты/vars внесены в GitHub пользователем. CI-ключ дописан в `/home/deploy/.ssh/authorized_keys` (строка `restrict <ed25519> ci@admin-rebit-core`; существующий ключ tarasov не тронут; права 700/600, владелец deploy). Проверено по самому CI-ключу: вход `deploy@37.143.8.221` ок, `docker info` доступен (deploy в группе `docker`, swarm=active/manager), **scp под `restrict` работает** (важно для `make deploy`). Осталось из блокеров: канарейка с GitHub-раннера (workflow_dispatch после push ветки), капча + закладка секретов на сервер + разворот swarm-cronjob-стека, tenancy-решение.

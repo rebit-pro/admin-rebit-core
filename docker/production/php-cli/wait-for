@@ -1,0 +1,33 @@
+#!/bin/sh
+# POSIX-замена wait-for-it (в alpine нет bash): wait-for host:port [-t seconds] [-- command...]
+set -e
+
+TARGET="$1"
+shift
+
+HOST="${TARGET%%:*}"
+PORT="${TARGET##*:}"
+TIMEOUT=60
+
+if [ "$1" = "-t" ]; then
+    TIMEOUT="$2"
+    shift 2
+fi
+
+if [ "$1" = "--" ]; then
+    shift
+fi
+
+elapsed=0
+until nc -z "$HOST" "$PORT" 2>/dev/null; do
+    elapsed=$((elapsed + 1))
+    if [ "$elapsed" -ge "$TIMEOUT" ]; then
+        echo "wait-for: timeout waiting for $HOST:$PORT" >&2
+        exit 1
+    fi
+    sleep 1
+done
+
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+fi

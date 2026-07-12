@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Auth;
 
+use App\Auth\Application\Port\CaptchaVerifier;
+
 final readonly class AuthService
 {
     private const TOKEN_TTL = '+24 hours';
@@ -12,11 +14,19 @@ final readonly class AuthService
     public function __construct(
         private AuthRepository $repository,
         private TokenFactory $tokenFactory,
+        private CaptchaVerifier $captchaVerifier,
     ) {}
 
     /** @param array<string, mixed> $payload */
-    public function login(array $payload): array
+    public function login(array $payload, ?string $ip = null): array
     {
+        $captcha = $payload['captcha'] ?? null;
+        $captchaToken = is_array($captcha) && is_string($captcha['token'] ?? null) ? $captcha['token'] : null;
+
+        if (!$this->captchaVerifier->verify($captchaToken, $ip)) {
+            throw new AuthException('CAPTCHA verification failed.', 422);
+        }
+
         $identifier = $this->requiredString($payload['email'] ?? $payload['login'] ?? null, 'Email or login is required.');
         $password = $this->requiredPassword($payload['password'] ?? null);
 
@@ -127,7 +137,7 @@ final readonly class AuthService
         );
     }
 
-    /** @param array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string} $user */
+    /** @param array{id:int,email:string,password_hash:string,name:string,role:string,login:string,phone:?string,address:?string,status:string} $user */
     private function issueToken(array $user): array
     {
         $token = $this->tokenFactory->create();

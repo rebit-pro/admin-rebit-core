@@ -8,6 +8,7 @@ use App\Shared\Domain\Clock\Clock;
 
 final class SystemClock implements Clock
 {
+    #[\Override]
     public function now(): \DateTimeImmutable
     {
         return new \DateTimeImmutable('now');

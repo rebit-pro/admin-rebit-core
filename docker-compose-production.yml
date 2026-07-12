@@ -1,0 +1,224 @@
+# Prod: Swarm-стек `admin` (docs/04-devops.md §3.3, §7).
+# Деплой: make deploy (релизы /srv/admin-rebit-core/site_N, migrate-gate ДО stack deploy).
+# Имена entryPoints/certResolver/middleware сверены с живым Traefik v2.11 (инвентаризация
+# 2026-07-12): http/https, letsEncrypt, secure-headers, redirect-to-https — совпадают.
+# Реплики 1 и малые resources — по обмеру хоста 2026-07-12: 1 CPU / 2 ГБ RAM,
+# на хосте уже три стека (site=P2P, solcoing, traefik). CPU-reservations не задаём.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  frontend:
+    image: ${REGISTRY}/admin-rebit-core-frontend:${IMAGE_TAG}
+    networks:
+      - traefik-public
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/health/nginx || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
+        - traefik.http.routers.admin-frontend.rule=Host(`admin.rebit-pro.ru`)
+        - traefik.http.routers.admin-frontend.entryPoints=https
+        - traefik.http.routers.admin-frontend.tls=true
+        - traefik.http.routers.admin-frontend.tls.certResolver=letsEncrypt
+        - traefik.http.routers.admin-frontend.middlewares=secure-headers
+        # http→https своим роутером: catchall живого шлюза сломан, но его middleware
+        # redirect-to-https валиден и доступен провайдер-wide (§5).
+        - traefik.http.routers.admin-frontend-http.rule=Host(`admin.rebit-pro.ru`)
+        - traefik.http.routers.admin-frontend-http.entryPoints=http
+        - traefik.http.routers.admin-frontend-http.middlewares=redirect-to-https
+        - traefik.http.services.admin-frontend.loadBalancer.server.port=80
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits: { cpus: "0.25", memory: 64M }
+        reservations: { memory: 16M }
+
+  api:
+    image: ${REGISTRY}/admin-rebit-core-api:${IMAGE_TAG}
+    environment:
+      PHP_FPM_HOST: api-php-fpm
+      CORS_ALLOWED_ORIGIN: https://admin.rebit-pro.ru
+    networks:
+      - traefik-public
+      - default
+    logging: *default-logging
+    healthcheck:
+      # Через цепочку nginx → php-fpm → БД: /health — readiness приложения.
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
+        - traefik.http.routers.admin-api.rule=Host(`api2.rebit-pro.ru`)
+        - traefik.http.routers.admin-api.entryPoints=https
+        - traefik.http.routers.admin-api.tls=true
+        - traefik.http.routers.admin-api.tls.certResolver=letsEncrypt
+        - traefik.http.routers.admin-api.middlewares=secure-headers
+        - traefik.http.routers.admin-api-http.rule=Host(`api2.rebit-pro.ru`)
+        - traefik.http.routers.admin-api-http.entryPoints=http
+        - traefik.http.routers.admin-api-http.middlewares=redirect-to-https
+        - traefik.http.services.admin-api.loadBalancer.server.port=80
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits: { cpus: "0.25", memory: 64M }
+        reservations: { memory: 16M }
+
+  api-php-fpm:
+    image: ${REGISTRY}/admin-rebit-core-api-php-fpm:${IMAGE_TAG}
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/admin_db_password
+      SMARTCAPTCHA_SERVER_KEY_FILE: /run/secrets/admin_smartcaptcha_server_key
+    configs:
+      - source: admin_backend_env
+        target: /app/.env
+    secrets:
+      - source: admin_db_password
+        target: admin_db_password
+      - source: admin_smartcaptcha_server_key
+        target: admin_smartcaptcha_server_key
+    networks:
+      - default
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "SCRIPT_NAME=/ping SCRIPT_FILENAME=/ping REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits: { cpus: "0.50", memory: 192M }
+        reservations: { memory: 64M }
+
+  api-postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-rebit_admin}
+      POSTGRES_USER: ${DB_USERNAME:-rebit}
+      POSTGRES_PASSWORD_FILE: /run/secrets/admin_db_password
+    secrets:
+      - source: admin_db_password
+        target: admin_db_password
+    volumes:
+      - api-postgres:/var/lib/postgresql/data
+    networks:
+      - default
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-rebit} -d ${DB_DATABASE:-rebit_admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      # MVP-топология: один хост, manager = db (§14.7).
+      placement:
+        constraints: [node.role == manager]
+      endpoint_mode: dnsrr
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+      resources:
+        limits: { cpus: "0.50", memory: 256M }
+        reservations: { memory: 128M }
+
+  # Cron-задачи исполняет swarm-cronjob (общий компонент кластера; наличие на живом
+  # swarm проверить при инвентаризации — если нет, ставится ОТДЕЛЬНЫМ стеком, §7).
+  api-purge-tokens:
+    image: ${REGISTRY}/admin-rebit-core-api-php-cli:${IMAGE_TAG}
+    command: ["php", "bin/app.php", "auth:purge-expired-tokens"]
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/admin_db_password
+    configs:
+      - source: admin_backend_env
+        target: /app/.env
+    secrets:
+      - source: admin_db_password
+        target: admin_db_password
+    networks:
+      - default
+    logging: *default-logging
+    deploy:
+      labels:
+        - swarm.cronjob.enable=true
+        - swarm.cronjob.schedule=0 * * * *
+        - swarm.cronjob.skip-running=true
+      mode: replicated
+      replicas: 0
+      restart_policy:
+        condition: none
+
+  # Бэкап в S3 (api-postgres-backup) ОТЛОЖЕН решением заказчика 2026-07-12 —
+  # образ и Dockerfile остаются в репо, сервис вернётся сюда при вводе бэкапов (§10).
+
+volumes:
+  api-postgres:
+
+networks:
+  traefik-public:
+    external: true
+  default:
+    driver: overlay
+    attachable: true
+
+configs:
+  admin_backend_env:
+    external: true
+    name: ${BACKEND_ENV_CONFIG_NAME}
+
+secrets:
+  admin_db_password:
+    external: true
+    name: ${ADMIN_DB_PASSWORD_SECRET_NAME}
+  admin_smartcaptcha_server_key:
+    external: true
+    name: ${ADMIN_SMARTCAPTCHA_SERVER_KEY_SECRET_NAME}

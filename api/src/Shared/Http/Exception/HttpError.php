@@ -17,6 +17,7 @@ final class HttpError extends \RuntimeException implements HttpException
         parent::__construct($message);
     }
 
+    #[\Override]
     public function status(): int
     {
         return $this->status;

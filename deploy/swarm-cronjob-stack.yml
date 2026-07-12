@@ -1,0 +1,20 @@
+# Общий компонент кластера: swarm-cronjob исполняет расписания из labels сервисов
+# с replicas:0 (у нас — api-purge-tokens). На живом swarm его НЕТ (инвентаризация
+# 2026-07-12) — развернуть ОДИН раз до первого деплоя стека admin:
+#   scp deploy/swarm-cronjob-stack.yml deploy@37.143.8.221:~/ \
+#     && ssh deploy@37.143.8.221 'docker stack deploy -c ~/swarm-cronjob-stack.yml cronjob'
+services:
+  cronjob:
+    image: crazymax/swarm-cronjob:1.13
+    environment:
+      TZ: Europe/Moscow
+      LOG_LEVEL: info
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits: { cpus: "0.10", memory: 32M }

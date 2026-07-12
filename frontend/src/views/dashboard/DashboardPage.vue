@@ -36,8 +36,8 @@ const starterItems = [
             <v-chip color="primary" variant="tonal" size="small" class="font-weight-bold mb-4">ReBit Admin Core</v-chip>
             <h1 class="text-h4 text-md-h3 font-weight-bold mb-2">Добро пожаловать, {{ userDisplayName }}</h1>
             <p class="text-body-1 text-medium-emphasis mb-0 dashboard-hero__subtitle">
-              Это стартовый экран универсальной админ-панели. Оставлен только базовый контур:
-              авторизация, регистрация, защищённый кабинет и меню пользователя.
+              Это стартовый экран универсальной админ-панели. Оставлен только базовый контур: авторизация, регистрация, защищённый кабинет и
+              меню пользователя.
             </p>
           </v-col>
 
@@ -76,8 +76,7 @@ const starterItems = [
 
 .dashboard-hero {
   background:
-    linear-gradient(135deg, rgba(var(--v-theme-primary), 0.14), rgba(var(--v-theme-secondary), 0.08)),
-    rgb(var(--v-theme-surface));
+    linear-gradient(135deg, rgba(var(--v-theme-primary), 0.14), rgba(var(--v-theme-secondary), 0.08)), rgb(var(--v-theme-surface));
   border: 1px solid rgba(var(--v-theme-primary), 0.14);
 }
 

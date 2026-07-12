@@ -62,8 +62,13 @@ final readonly class Handler
 
             $this->events->publish(new UserCreated($id, $command->role, $this->clock->now()));
 
-            /** @var array<string, mixed> $created */
-            return $this->users->managedUserById($id);
+            $created = $this->users->managedUserById($id);
+
+            if (null === $created) {
+                throw new HttpError('User not found.', 404);
+            }
+
+            return $created;
         });
     }
 

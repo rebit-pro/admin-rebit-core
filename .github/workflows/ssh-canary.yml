@@ -1,0 +1,26 @@
+# SSH-канарейка (docs/04-devops.md §13 шаг 0): проверяет доступность боевого сервера
+# с GitHub-hosted runner'а ДО написания deploy-контура. Провал → развилка self-hosted runner.
+# Пререквизит: CI-ключ уже лежит в authorized_keys deploy на сервере; secrets настроены.
+name: ssh-canary
+
+on:
+  workflow_dispatch:
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Install SSH key and pinned known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Probe SSH connectivity
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 \
+            -p "${{ secrets.PORT }}" \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.HOST }}" \
+            'echo "CANARY_OK: $(hostname) $(date -u +%FT%TZ)"; docker info --format "Swarm: {{.Swarm.LocalNodeState}}"'

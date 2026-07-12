@@ -12,7 +12,7 @@
                     "check":  "npm run lint \u0026\u0026 npm run typecheck \u0026\u0026 npm run typecheck:e2e",
                     "lint":  "eslint . --ignore-pattern .gitignore",
                     "lint:fix":  "npm run lint -- --fix",
-                    "e2e:server":  "cross-env VITE_API_URL=/api VITE_API_MOCKS_ENABLED=true VITE_GEETEST_CAPTCHA_ID= vite --host 127.0.0.1 --port 4173 --strictPort",
+                    "e2e:server":  "cross-env VITE_API_URL=/api VITE_API_MOCKS_ENABLED=true VITE_SMARTCAPTCHA_CLIENT_KEY= vite --host 127.0.0.1 --port 4173 --strictPort",
                     "test:e2e":  "cross-env TS_NODE_PROJECT=tsconfig.e2e.json cucumber-js --config cucumber.mjs",
                     "test:e2e:run":  "start-server-and-test e2e:server http://127.0.0.1:4173 test:e2e",
                     "test:e2e:headed":  "cross-env PLAYWRIGHT_HEADLESS=false start-server-and-test e2e:server http://127.0.0.1:4173 test:e2e",

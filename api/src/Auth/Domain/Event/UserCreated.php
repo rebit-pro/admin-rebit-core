@@ -14,21 +14,25 @@ final readonly class UserCreated implements DomainEvent
         private \DateTimeImmutable $occurredAt,
     ) {}
 
+    #[\Override]
     public function eventName(): string
     {
         return 'auth.user.created';
     }
 
+    #[\Override]
     public function occurredAt(): \DateTimeImmutable
     {
         return $this->occurredAt;
     }
 
+    #[\Override]
     public function aggregateId(): string
     {
         return (string)$this->userId;
     }
 
+    #[\Override]
     public function payload(): array
     {
         return ['userId' => $this->userId, 'role' => $this->role];

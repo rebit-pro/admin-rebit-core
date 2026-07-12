@@ -17,18 +17,12 @@ final readonly class Migrator
 
     public function migrate(): void
     {
-        $driver = $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
-        $executedAtDefinition = 'sqlite' === $driver
-            ? 'TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP'
-            : 'TIMESTAMPTZ NOT NULL DEFAULT now()';
-
-        $this->pdo->exec(sprintf(
+        $this->pdo->exec(
             'CREATE TABLE IF NOT EXISTS schema_migrations (
                 version VARCHAR(255) PRIMARY KEY,
-                executed_at %s
+                executed_at TIMESTAMPTZ NOT NULL DEFAULT now()
             )',
-            $executedAtDefinition,
-        ));
+        );
 
         $files = glob($this->migrationsPath . '/*.sql') ?: [];
         sort($files);
